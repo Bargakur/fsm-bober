@@ -37,8 +37,9 @@ export default function LoginScreen({ onLogin }: Props) {
     setError('');
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL
-        ? `${import.meta.env.VITE_API_URL}/api`
+      const raw = import.meta.env.VITE_API_URL;
+      const apiBase = raw
+        ? `${raw.startsWith('http') ? raw : `https://${raw}`}/api`
         : '/api';
       const res = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',

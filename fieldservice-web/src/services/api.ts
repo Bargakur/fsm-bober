@@ -1,10 +1,14 @@
 import type { Order, Treatment, Technician, CreateOrderDto, CreateOrderResponse } from '../types';
 
-// W produkcji (Railway) VITE_API_URL = "https://fsm-api.up.railway.app"
+// W produkcji (Railway) VITE_API_URL = adres backendu
 // Lokalnie puste → używa "/api" (proxy przez Vite)
-const BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
+function getApiBase(): string {
+  const raw = import.meta.env.VITE_API_URL;
+  if (!raw) return '/api';
+  const url = raw.startsWith('http') ? raw : `https://${raw}`;
+  return `${url}/api`;
+}
+const BASE = getApiBase();
 
 let _token: string | null = null;
 let _onUnauthorized: (() => void) | null = null;
