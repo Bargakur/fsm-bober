@@ -41,21 +41,34 @@ export default function LoginScreen({ onLogin }: Props) {
       const apiBase = raw
         ? `${raw.startsWith('http') ? raw : `https://${raw}`}/api`
         : '/api';
-      const res = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login, password }),
-      });
 
-      if (!res.ok) {
+      let res: Response;
+      try {
+        res = await fetch(`${apiBase}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login, password }),
+        });
+      } catch (networkErr) {
+        throw new Error(`Nie można połączyć się z serwerem (${apiBase}). Sprawdź połączenie internetowe.`);
+      }
+
+      if (res.status === 401) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message || 'Nieprawidłowy login lub hasło');
+      }
+      if (res.status === 429) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Zbyt wiele prób logowania. Spróbuj później.');
+      }
+      if (!res.ok) {
+        throw new Error(`Błąd serwera (${res.status}). Spróbuj ponownie później.`);
       }
 
       const data = await res.json();
       onLogin(data.token, data.user);
     } catch (err: any) {
-      setError(err.message || 'Błąd logowania');
+      setError(err.message || 'Nieznany błąd logowania');
     } finally {
       setLoading(false);
     }
