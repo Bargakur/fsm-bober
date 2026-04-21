@@ -1,0 +1,80 @@
+# ============================================================
+# docker compose up — uruchamia cały system jednym poleceniem
+# ============================================================
+
+services:
+
+  # --- Backend API (C# / ASP.NET Core) ---
+  api:
+    build: .
+    ports:
+      - "5050:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Database=fieldservice;Username=postgres;Password=dev123
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Jwt__Key=FsmBoberSuperSecretKey2026!@#$%^&*()
+
+  # --- Baza danych ---
+  postgres:
+    image: postgis/postgis:16-3.4     # PostgreSQL + PostGIS (geolokalizacja)
+    environment:
+      POSTGRES_DB: fieldservice
+      POSTGRES_PASSWORD: dev123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+
+  # --- Cache i kolejki ---
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # --- Optymalizacja tras ---
+  # VROOM potrzebuje OSRM do obliczania realnych tras drogowych.
+  # Na start można pominąć (system użyje Haversine z SuggestionService).
+  # Odkomentuj gdy będziesz gotowy na realne trasy:
+  #
+  # vroom:
+  #   image: vroomvrp/vroom-docker:v1.14.0
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on: [osrm]
+  #   environment:
+  #     - VROOM_ROUTER=osrm
+  #     - OSRM_URL=http://osrm:5000
+  #
+  # osrm:
+  #   image: osrm/osrm-backend:latest
+  #   ports:
+  #     - "5001:5000"
+  #   volumes:
+  #     - ./osrm-data:/data
+  #   command: osrm-routed --algorithm mld /data/poland-latest.osrm
+
+  # --- Storage zdjęć protokołów ---
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"       # API
+      - "9001:9001"       # Panel webowy MinIO
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata:       # Dane PostgreSQL — przetrwają restart kontenera
+  miniodata:    # Zdjęcia protokołów
