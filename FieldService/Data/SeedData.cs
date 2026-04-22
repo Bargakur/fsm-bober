@@ -78,16 +78,16 @@ public static class SeedData
     // ---- Technicy ----
     private static void SeedTechnicians(AppDbContext db)
     {
-        var technicians = new (string FullName, string Phone, double Lat, double Lng, string Skills)[]
+        var technicians = new (string FullName, string Phone, double Lat, double Lng, string Skills, string Specs)[]
         {
-            ("Tomasz Mazur", "+48 601 111 111", 52.2297, 21.0122, "ddd,dezynsekcja"),
-            ("Ewa Kaczmarek", "+48 602 222 222", 52.2550, 20.9840, "dezynsekcja"),
-            ("Piotr Wójcik", "+48 603 333 333", 52.1935, 21.0350, "ddd,dezynsekcja"),
-            ("Karolina Zielińska", "+48 604 444 444", 52.2680, 20.9530, "dezynsekcja"),
-            ("Adam Nowakowski", "+48 605 555 555", 52.2150, 21.0460, "ddd"),
+            ("Tomasz Mazur", "+48 601 111 111", 52.2297, 21.0122, "ddd,dezynsekcja", "drabina,osy,szerszenie"),
+            ("Ewa Kaczmarek", "+48 602 222 222", 52.2550, 20.9840, "dezynsekcja", "osy"),
+            ("Piotr Wójcik", "+48 603 333 333", 52.1935, 21.0350, "ddd,dezynsekcja", "drabina,szerszenie"),
+            ("Karolina Zielińska", "+48 604 444 444", 52.2680, 20.9530, "dezynsekcja", "osy,szerszenie"),
+            ("Adam Nowakowski", "+48 605 555 555", 52.2150, 21.0460, "ddd", "drabina"),
         };
 
-        foreach (var (fullName, phone, lat, lng, skills) in technicians)
+        foreach (var (fullName, phone, lat, lng, skills, specs) in technicians)
         {
             if (!db.Technicians.Any(t => t.FullName == fullName))
             {
@@ -98,6 +98,7 @@ public static class SeedData
                     HomeLat = lat,
                     HomeLng = lng,
                     Skills = skills,
+                    Specializations = specs,
                     IsActive = true,
                 });
             }

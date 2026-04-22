@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Pencil, Trash2, X, Check, RotateCcw } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, X, Check, RotateCcw, ChevronDown, ChevronRight, Phone, MapPin, Wrench, Shield } from 'lucide-react';
 import { getTechnicians, createTechnician, updateTechnician, deleteTechnician } from '../services/api';
 import type { Technician } from '../types';
 import type { CreateTechnicianDto } from '../services/api';
+
+const SPECIALIZATION_OPTIONS = ['drabina', 'osy', 'szerszenie'] as const;
 
 const EMPTY_FORM: CreateTechnicianDto = {
   fullName: '',
@@ -10,6 +12,7 @@ const EMPTY_FORM: CreateTechnicianDto = {
   homeLat: 52.2297,
   homeLng: 21.0122,
   skills: '',
+  specializations: '',
 };
 
 export default function AdminPanel() {
@@ -18,10 +21,14 @@ export default function AdminPanel() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Expanded row
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   // Form state
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<CreateTechnicianDto>(EMPTY_FORM);
+  const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Delete confirmation
@@ -30,7 +37,7 @@ export default function AdminPanel() {
   const loadTechnicians = async () => {
     try {
       setLoading(true);
-      const data = await getTechnicians(true); // include inactive
+      const data = await getTechnicians(true);
       setTechnicians(data);
     } catch (err: any) {
       setError(err.message);
@@ -41,7 +48,6 @@ export default function AdminPanel() {
 
   useEffect(() => { loadTechnicians(); }, []);
 
-  // Auto-hide success message
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => setSuccess(''), 3000);
@@ -49,8 +55,14 @@ export default function AdminPanel() {
     }
   }, [success]);
 
+  const toggleExpand = (id: number) => {
+    setExpandedId(expandedId === id ? null : id);
+    setDeletingId(null);
+  };
+
   const openNewForm = () => {
     setForm(EMPTY_FORM);
+    setSelectedSpecs([]);
     setEditingId(null);
     setShowForm(true);
     setError('');
@@ -63,10 +75,18 @@ export default function AdminPanel() {
       homeLat: tech.homeLat,
       homeLng: tech.homeLng,
       skills: tech.skills,
+      specializations: tech.specializations,
     });
+    setSelectedSpecs(tech.specializations ? tech.specializations.split(',').filter(Boolean) : []);
     setEditingId(tech.id);
     setShowForm(true);
     setError('');
+  };
+
+  const toggleSpec = (spec: string) => {
+    setSelectedSpecs(prev =>
+      prev.includes(spec) ? prev.filter(s => s !== spec) : [...prev, spec]
+    );
   };
 
   const handleSave = async () => {
@@ -78,12 +98,14 @@ export default function AdminPanel() {
     setSaving(true);
     setError('');
 
+    const payload = { ...form, specializations: selectedSpecs.join(',') };
+
     try {
       if (editingId) {
-        await updateTechnician(editingId, form);
+        await updateTechnician(editingId, payload);
         setSuccess('Technik zaktualizowany');
       } else {
-        await createTechnician(form);
+        await createTechnician(payload);
         setSuccess('Technik dodany');
       }
       setShowForm(false);
@@ -100,6 +122,7 @@ export default function AdminPanel() {
     try {
       await deleteTechnician(id);
       setDeletingId(null);
+      setExpandedId(null);
       setSuccess('Technik dezaktywowany');
       await loadTechnicians();
     } catch (err: any) {
@@ -165,14 +188,30 @@ export default function AdminPanel() {
               </div>
 
               <div className="field">
-                <label>Umiejętności</label>
+                <label>Umiejętności (skills)</label>
                 <input
                   type="text"
                   value={form.skills}
                   onChange={e => setForm({ ...form, skills: e.target.value })}
                   placeholder="np. ddd,dezynsekcja"
                 />
-                <span className="field-hint">Oddzielone przecinkami. Dostępne: ddd, dezynsekcja</span>
+                <span className="field-hint">Oddzielone przecinkami</span>
+              </div>
+
+              <div className="field">
+                <label>Co robi</label>
+                <div className="spec-checkboxes">
+                  {SPECIALIZATION_OPTIONS.map(spec => (
+                    <label key={spec} className="spec-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedSpecs.includes(spec)}
+                        onChange={() => toggleSpec(spec)}
+                      />
+                      <span className="spec-checkbox-label">{spec}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="form-section-label">Lokalizacja domu (GPS)</div>
@@ -208,95 +247,125 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Tabela techników */}
+      {/* Lista techników */}
       {loading ? (
         <div className="admin-loading">Ładowanie...</div>
       ) : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Imię i nazwisko</th>
-                <th>Telefon</th>
-                <th>Umiejętności</th>
-                <th>Lokalizacja</th>
-                <th>Status</th>
-                <th>Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {technicians.map(tech => (
-                <tr key={tech.id} className={!tech.isActive ? 'row-inactive' : ''}>
-                  <td className="td-name">{tech.fullName}</td>
-                  <td>{tech.phone}</td>
-                  <td>
-                    <div className="skill-tags">
-                      {tech.skills.split(',').filter(Boolean).map(s => (
-                        <span key={s} className="skill-tag">{s.trim()}</span>
-                      ))}
+        <div className="tech-list">
+          {technicians.map(tech => {
+            const isExpanded = expandedId === tech.id;
+            const specs = tech.specializations?.split(',').filter(Boolean) || [];
+
+            return (
+              <div
+                key={tech.id}
+                className={`tech-card ${!tech.isActive ? 'tech-card-inactive' : ''} ${isExpanded ? 'tech-card-expanded' : ''}`}
+              >
+                {/* Kompaktowy wiersz — imię + telefon */}
+                <div className="tech-card-header" onClick={() => toggleExpand(tech.id)}>
+                  <div className="tech-card-chevron">
+                    {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </div>
+                  <div className="tech-card-summary">
+                    <span className="tech-card-name">{tech.fullName}</span>
+                    {!tech.isActive && <span className="tech-card-badge-inactive">nieaktywny</span>}
+                  </div>
+                  <span className="tech-card-phone">{tech.phone}</span>
+                </div>
+
+                {/* Rozwinięte szczegóły */}
+                {isExpanded && (
+                  <div className="tech-card-details">
+                    <div className="tech-detail-grid">
+                      <div className="tech-detail-item">
+                        <Wrench size={14} />
+                        <div>
+                          <span className="tech-detail-label">Co robi</span>
+                          <div className="tech-detail-value">
+                            {specs.length > 0 ? (
+                              <div className="skill-tags">
+                                {specs.map(s => <span key={s} className="skill-tag">{s}</span>)}
+                              </div>
+                            ) : (
+                              <span className="text-muted">Nie ustawiono</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="tech-detail-item">
+                        <Shield size={14} />
+                        <div>
+                          <span className="tech-detail-label">Umiejętności</span>
+                          <div className="tech-detail-value">
+                            {tech.skills ? (
+                              <div className="skill-tags">
+                                {tech.skills.split(',').filter(Boolean).map(s => (
+                                  <span key={s} className="skill-tag skill-tag-secondary">{s.trim()}</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted">Brak</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="tech-detail-item">
+                        <MapPin size={14} />
+                        <div>
+                          <span className="tech-detail-label">Lokalizacja domu</span>
+                          <span className="tech-detail-value tech-detail-coords">
+                            {tech.homeLat.toFixed(4)}, {tech.homeLng.toFixed(4)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="tech-detail-item">
+                        <Phone size={14} />
+                        <div>
+                          <span className="tech-detail-label">Telefon</span>
+                          <span className="tech-detail-value">{tech.phone}</span>
+                        </div>
+                      </div>
                     </div>
-                  </td>
-                  <td className="td-coords">
-                    {tech.homeLat.toFixed(4)}, {tech.homeLng.toFixed(4)}
-                  </td>
-                  <td>
-                    <span className={`status-badge ${tech.isActive ? 'status-active' : 'status-inactive'}`}>
-                      {tech.isActive ? 'Aktywny' : 'Nieaktywny'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button
-                        className="btn-icon"
-                        title="Edytuj"
-                        onClick={() => openEditForm(tech)}
-                      >
-                        <Pencil size={16} />
+
+                    <div className="tech-card-actions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => openEditForm(tech)}>
+                        <Pencil size={14} />
+                        Edytuj
                       </button>
 
                       {tech.isActive ? (
                         deletingId === tech.id ? (
                           <div className="confirm-delete">
-                            <span className="confirm-text">Usunąć?</span>
-                            <button
-                              className="btn-icon btn-icon-danger"
-                              title="Potwierdź"
-                              onClick={() => handleDelete(tech.id)}
-                            >
-                              <Check size={16} />
+                            <span className="confirm-text">Na pewno dezaktywować?</span>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(tech.id)}>
+                              <Check size={14} />
+                              Tak
                             </button>
-                            <button
-                              className="btn-icon"
-                              title="Anuluj"
-                              onClick={() => setDeletingId(null)}
-                            >
-                              <X size={16} />
+                            <button className="btn btn-secondary btn-sm" onClick={() => setDeletingId(null)}>
+                              Nie
                             </button>
                           </div>
                         ) : (
-                          <button
-                            className="btn-icon btn-icon-danger"
-                            title="Dezaktywuj"
-                            onClick={() => setDeletingId(tech.id)}
-                          >
-                            <Trash2 size={16} />
+                          <button className="btn btn-danger-outline btn-sm" onClick={() => setDeletingId(tech.id)}>
+                            <Trash2 size={14} />
+                            Dezaktywuj
                           </button>
                         )
                       ) : (
-                        <button
-                          className="btn-icon btn-icon-success"
-                          title="Aktywuj ponownie"
-                          onClick={() => handleReactivate(tech)}
-                        >
-                          <RotateCcw size={16} />
+                        <button className="btn btn-success-outline btn-sm" onClick={() => handleReactivate(tech)}>
+                          <RotateCcw size={14} />
+                          Aktywuj ponownie
                         </button>
                       )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

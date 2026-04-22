@@ -14,6 +14,7 @@ export interface Technician {
   homeLat: number;
   homeLng: number;
   skills: string;
+  specializations: string;
   isActive: boolean;
 }
 

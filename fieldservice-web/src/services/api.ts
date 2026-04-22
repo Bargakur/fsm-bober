@@ -81,6 +81,7 @@ export interface CreateTechnicianDto {
   homeLat: number;
   homeLng: number;
   skills: string;
+  specializations: string;
 }
 
 export interface UpdateTechnicianDto {
@@ -89,6 +90,7 @@ export interface UpdateTechnicianDto {
   homeLat?: number;
   homeLng?: number;
   skills?: string;
+  specializations?: string;
   isActive?: boolean;
 }
 

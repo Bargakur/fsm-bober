@@ -858,47 +858,111 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   font-size: 14px;
 }
 
-/* Table */
-.admin-table-wrap {
+/* Expandable tech list */
+.tech-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tech-card {
   background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow: hidden;
+  transition: box-shadow 0.15s;
 }
+.tech-card-expanded {
+  box-shadow: var(--shadow);
+  border-color: var(--accent);
+}
+.tech-card-inactive {
+  opacity: 0.55;
+}
+.tech-card-inactive:hover { opacity: 0.75; }
 
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.admin-table th {
-  text-align: left;
+/* Header row — always visible */
+.tech-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 12px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.tech-card-header:hover { background: var(--bg-hover); }
+
+.tech-card-chevron {
   color: var(--text-muted);
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-.admin-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-.admin-table tr:last-child td { border-bottom: none; }
-.admin-table tr:hover td { background: var(--bg-hover); }
-
-.row-inactive td {
-  opacity: 0.5;
+  flex-shrink: 0;
 }
 
-.td-name { font-weight: 600; }
-.td-coords {
-  font-size: 12px;
+.tech-card-summary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tech-card-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.tech-card-badge-inactive {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tech-card-phone {
+  font-size: 13px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Expanded details */
+.tech-card-details {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+  animation: fadeIn 0.15s;
+}
+
+.tech-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px 0;
+}
+
+.tech-detail-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.tech-detail-item > svg {
+  color: var(--text-muted);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.tech-detail-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: block;
+  margin-bottom: 3px;
+}
+.tech-detail-value {
+  font-size: 13px;
+}
+.tech-detail-coords {
   font-family: monospace;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
@@ -916,37 +980,81 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   background: var(--accent-light);
   color: var(--accent);
 }
-
-/* Status badges for admin */
-.status-active {
-  background: var(--success-bg);
-  color: var(--success);
-}
-.status-inactive {
-  background: #f1f5f9;
-  color: #94a3b8;
+.skill-tag-secondary {
+  background: var(--info-bg);
+  color: var(--info);
 }
 
-/* Action buttons */
-.action-buttons {
+/* Card actions */
+.tech-card-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
-.btn-icon-danger { color: var(--danger); }
-.btn-icon-danger:hover { background: var(--danger-bg); color: var(--danger); }
-.btn-icon-success { color: var(--success); }
-.btn-icon-success:hover { background: var(--success-bg); color: var(--success); }
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+}
+.btn-danger:hover { background: #a82a2a; }
+.btn-danger-outline {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+.btn-danger-outline:hover {
+  background: var(--danger-bg);
+}
+.btn-success-outline {
+  background: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.btn-success-outline:hover {
+  background: var(--success-bg);
+}
 
 .confirm-delete {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .confirm-text {
   font-size: 12px;
   color: var(--danger);
   font-weight: 500;
+}
+
+/* Specialization checkboxes */
+.spec-checkboxes {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+.spec-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.spec-checkbox-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+.spec-checkbox-label {
+  text-transform: capitalize;
 }
 
 /* Field hint */
