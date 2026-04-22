@@ -19,15 +19,16 @@ Główny folder projektu: ~/fieldservice_mobile_local/
 ==============================================================
 
 FieldService/
-├── Program.cs                          # Punkt wejścia, konfiguracja DI, JSON converters
-├── appsettings.json                    # Connection string do PostgreSQL
+├── Program.cs                          # Punkt wejścia, konfiguracja DI, JSON converters, Railway support
+├── appsettings.json                    # Connection string do PostgreSQL (lokalny)
 ├── FieldService.csproj                 # Definicja projektu .NET 8
 ├── Dockerfile                          # Docker build (multi-stage)
+├── .dockerignore                       # Pliki wykluczone z Docker buildu
 ├── docker-compose.yml                  # PostgreSQL + Redis + MinIO + API
 │
 ├── Models/
-│   ├── User.cs                         # Użytkownicy panelu (admin/sales)
-│   ├── Technician.cs                   # Technicy (imię, telefon, GPS domu, umiejętności)
+│   ├── User.cs                         # Użytkownicy panelu (login, role, hash hasła)
+│   ├── Technician.cs                   # Technicy (imię, telefon, GPS domu, skills, specializations)
 │   ├── Treatment.cs                    # Rodzaje zabiegów (nazwa, czas, cena, wymagane skill)
 │   ├── Order.cs                        # Zlecenia (klient, adres, zabieg, termin, status)
 │   ├── Availability.cs                 # Dostępność techników (dzień, godziny)
@@ -35,9 +36,9 @@ FieldService/
 │   └── Payment.cs                      # Płatność za zlecenie
 │
 ├── Controllers/
-│   ├── AuthController.cs               # Login JWT + hashowanie haseł PBKDF2
+│   ├── AuthController.cs               # Login JWT + hashowanie haseł PBKDF2 + brute-force protection
 │   ├── OrdersController.cs             # CRUD zleceń + GPS + zamykanie + geocoding [Authorize]
-│   ├── TechniciansController.cs        # Lista techników + dostępność [Authorize]
+│   ├── TechniciansController.cs        # CRUD techników + dostępność [Authorize] + admin CRUD
 │   └── TreatmentsController.cs         # Lista zabiegów (dropdown) [Authorize]
 │
 ├── Services/
@@ -52,37 +53,42 @@ FieldService/
 │
 └── Data/
     ├── AppDbContext.cs                  # EF Core DbContext
-    └── SeedData.cs                     # Dane testowe (3 users, 5 techników, 3 zabiegi, 4 zlecenia)
+    └── SeedData.cs                     # Dane testowe (4 users, 5 techników, 3 zabiegi, 4 zlecenia)
 
 
 3. STRUKTURA PLIKÓW — FRONTEND WEB
 ==============================================================
 
 fieldservice-web/
-├── package.json                        # Zależności: React 18, Lucide
+├── package.json                        # Zależności: React 18, Lucide, Leaflet
 ├── vite.config.ts                      # Vite + proxy /api -> localhost:5050
 ├── tsconfig.json
+├── Dockerfile                          # Docker build dla Railway (nginx)
+├── .dockerignore
+├── nginx.conf                          # Konfiguracja nginx dla SPA
 │
 └── src/
     ├── main.tsx                         # Punkt wejścia React
-    ├── App.tsx                          # Layout: Sidebar + Calendar + modals
+    ├── App.tsx                          # Layout: Sidebar + Calendar/Admin + modals + auth
     ├── index.css                        # Wszystkie style (zmienne CSS, komponenty)
+    ├── vite-env.d.ts                    # TypeScript deklaracje env vars
     │
     ├── types/
     │   └── index.ts                     # TypeScript interfejsy (Order, Treatment, Technician, etc.)
     │
     ├── services/
-    │   └── api.ts                       # Fetch wrapper: getOrders, createOrder, assignTechnician, etc.
+    │   └── api.ts                       # Fetch wrapper + auth + CRUD techników
     │
     └── components/
         ├── ResourceCalendar.tsx         # Własny widok dnia z kolumnami techników (06:00-20:00)
         ├── Calendar.tsx                 # (stary FullCalendar — nieużywany)
         ├── OrderForm.tsx                # Formularz nowego zlecenia (dropdown zabiegów, cena, czas)
-        ├── OrderDetail.tsx              # Szczegóły zlecenia — adres z linkiem Google Maps (pinezka)
+        ├── OrderDetail.tsx              # Szczegóły zlecenia — adres z linkiem Google Maps
         ├── SuggestionPanel.tsx          # Panel sugestii techników do przypisania
+        ├── AdminPanel.tsx              # Panel admin — zarządzanie technikami (expandable cards)
         ├── LoginScreen.tsx             # Ekran logowania JWT (login + hasło)
         ├── AddressInput.tsx            # Autocomplete adresów (Google Places) + mapa Leaflet
-        └── Sidebar.tsx                  # Nawigacja boczna
+        └── Sidebar.tsx                  # Nawigacja boczna (z przyciskiem Admin dla adminów)
 
 
 4. STRUKTURA PLIKÓW — APLIKACJA MOBILNA (Flutter)
@@ -108,7 +114,7 @@ fieldservice_mobile/
 │   │   └── day_screen.dart             # Widok dnia — lista zleceń + nawigacja
 │   │
 │   └── widgets/
-│       └── order_card.dart             # Rozwijalna karta zlecenia + nawigacja Google Maps (trasa z poprzedniego zabiegu)
+│       └── order_card.dart             # Rozwijalna karta zlecenia + nawigacja Google Maps
 │
 ├── ios/                                # Pliki platformy iOS
 ├── android/                            # Pliki platformy Android
@@ -121,7 +127,7 @@ fieldservice_mobile/
 5. KOMENDY URUCHOMIENIA
 ==============================================================
 
---- BACKEND (Docker) ---
+--- BACKEND (Docker — lokalnie) ---
 
 cd ~/fieldservice_mobile_local/FieldService
 
@@ -146,7 +152,7 @@ docker compose up --build
 # MinIO (storage zdjęć):          http://localhost:9001 (admin/minioadmin123)
 
 
---- FRONTEND WEB ---
+--- FRONTEND WEB (lokalnie) ---
 
 cd ~/fieldservice_mobile_local/fieldservice-web
 
@@ -158,6 +164,29 @@ npm run dev
 
 # Frontend dostępny na:           http://localhost:3000
 # Proxy /api -> localhost:5050 (konfiguracja w vite.config.ts)
+
+
+--- RAILWAY (produkcja) ---
+
+# Deploy: git push → Railway automatycznie buduje i deployuje
+cd ~/fieldservice_mobile_local
+git add .
+git commit -m "opis zmian"
+git push
+
+# Serwisy na Railway:
+#   fsm-bober (backend)       — Root Directory: FieldService
+#   affectionate-emotion (frontend) — Root Directory: fieldservice-web
+#   Postgres                  — managed database
+#
+# Zmienne środowiskowe backend:
+#   DATABASE_URL              — auto z Railway PostgreSQL
+#   Jwt__Key                  — klucz JWT
+#
+# Zmienne środowiskowe frontend:
+#   VITE_API_URL              — URL backendu (Railway auto-dodaje https://)
+#
+# UWAGA: VITE_API_URL jest build-time variable — po zmianie trzeba Redeploy
 
 
 --- APLIKACJA MOBILNA (Flutter) ---
@@ -207,11 +236,11 @@ Role (od najniższej):
   handlowiec, starszy_handlowiec, admin, supervisor, superadmin
 
 Technicy (Warszawa):
-  1. Tomasz Mazur       — Śródmieście — skills: ddd, dezynsekcja
-  2. Ewa Kaczmarek      — Żoliborz    — skills: dezynsekcja
-  3. Piotr Wójcik       — Mokotów     — skills: ddd, dezynsekcja
-  4. Karolina Zielińska — Bielany     — skills: dezynsekcja
-  5. Adam Nowakowski    — Ursynów     — skills: ddd
+  1. Tomasz Mazur       — Śródmieście — skills: ddd, dezynsekcja — co robi: drabina, osy, szerszenie
+  2. Ewa Kaczmarek      — Żoliborz    — skills: dezynsekcja      — co robi: osy
+  3. Piotr Wójcik       — Mokotów     — skills: ddd, dezynsekcja — co robi: drabina, szerszenie
+  4. Karolina Zielińska — Bielany     — skills: dezynsekcja      — co robi: osy, szerszenie
+  5. Adam Nowakowski    — Ursynów     — skills: ddd              — co robi: drabina
 
 Zabiegi:
   1. Szczury                — 60 min  — 350 zł — wymaga: ddd
@@ -234,24 +263,50 @@ GET    /api/orders/technician/{id}?date=...      Zlecenia technika na dzień
 POST   /api/orders/technician/{id}/location      Raport GPS (auto-arrival 100m)
 PUT    /api/orders/{id}/complete                 Zamknij zlecenie
 
-GET    /api/technicians                          Lista techników
+GET    /api/technicians                          Lista techników [AllowAnonymous]
+GET    /api/technicians?includeInactive=true     Wszystkie (z nieaktywnymi) [Authorize]
 GET    /api/technicians/{id}                     Szczegóły technika
 GET    /api/technicians/{id}/availability?date=  Dostępność na dzień
+POST   /api/technicians                          Dodaj technika [admin/superadmin]
+PUT    /api/technicians/{id}                     Edytuj technika [admin/superadmin]
+DELETE /api/technicians/{id}                     Dezaktywuj technika [admin/superadmin]
 
 GET    /api/treatments                           Lista zabiegów (dropdown)
 GET    /api/treatments/{id}                      Szczegóły zabiegu
 
+GET    /health                                   Health check
+GET    /debug/db                                 Diagnostyka bazy (TYMCZASOWY)
 
-8. TODO / PLANOWANE FUNKCJE
+
+8. BEZPIECZEŃSTWO
 ==============================================================
 
-[x] Geokodowanie adresów (Nominatim/OpenStreetMap) — GeocodingService w backendzie
+Brute-force protection na login:
+  - Max 5 prób/min z jednego IP (HTTP 429)
+  - Blokada konta na 15 min po 5 nieudanych próbach
+  - PBKDF2 (100,000 iteracji SHA-256) + random salt
+  - JWT token 12h, role w claimach
+
+Panel admin (Sidebar → Administracja):
+  - Widoczny tylko dla: admin, supervisor, superadmin
+  - CRUD techników wymaga roli admin/supervisor/superadmin
+
+
+9. TODO / PLANOWANE FUNKCJE
+==============================================================
+
+[x] Geokodowanie adresów (Nominatim/OpenStreetMap)
 [x] Widok kalendarza z kolumnami techników (ResourceCalendar)
 [x] Google Maps pinezka w szczegółach zlecenia (web)
-[x] Nawigacja trasą z poprzedniego zabiegu w aplikacji mobilnej (Flutter)
-[ ] Address-first flow: wpisz adres -> filtruj techników w promieniu 250km
-[x] JWT autoryzacja (login/hasło) — PBKDF2 hash, 12h token, role w claimach
-[x] Google Places Autocomplete dla adresów (z mapką Leaflet do ręcznego wskazania)
+[x] Nawigacja trasą z poprzedniego zabiegu (Flutter)
+[x] JWT autoryzacja (login/hasło) — PBKDF2 hash, 12h token
+[x] Google Places Autocomplete dla adresów (+ mapa Leaflet)
+[x] Railway deployment (backend + frontend + PostgreSQL)
+[x] Brute-force protection na login
+[x] Panel administracyjny — CRUD techników
+[x] Specjalizacje techników (co robi: drabina, osy, szerszenie)
+[ ] EF Core Migrations (zamiast EnsureCreated) — POTRZEBNE!
+[ ] Address-first flow: wpisz adres -> filtruj techników w promieniu
 [ ] Upload zdjęć protokołów (MinIO)
 [ ] VROOM/OSRM optymalizacja tras
 [ ] Firebase push notifications

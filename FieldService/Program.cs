@@ -75,41 +75,6 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
-
-    // Dodaj brakujące kolumny — najpierw sprawdź prawdziwą nazwę tabeli
-    try
-    {
-        // Znajdź nazwę tabeli Technicians w bazie (może być "Technicians" lub "technicians")
-        using var conn = db.Database.GetDbConnection();
-        conn.Open();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT table_name FROM information_schema.tables
-            WHERE table_name ILIKE 'technicians' AND table_schema = 'public' LIMIT 1";
-        var tableName = cmd.ExecuteScalar()?.ToString();
-
-        if (tableName != null)
-        {
-            // Sprawdź czy kolumna istnieje
-            cmd.CommandText = $@"
-                SELECT 1 FROM information_schema.columns
-                WHERE table_name = '{tableName}' AND column_name ILIKE 'specializations'";
-            var exists = cmd.ExecuteScalar();
-
-            if (exists == null)
-            {
-                cmd.CommandText = $@"ALTER TABLE ""{tableName}"" ADD COLUMN ""Specializations"" text NOT NULL DEFAULT ''";
-                cmd.ExecuteNonQuery();
-                Console.WriteLine("[MIGRATION] Added Specializations column to Technicians");
-            }
-        }
-        conn.Close();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[MIGRATION WARNING] {ex.Message}");
-    }
-
     SeedData.Initialize(db);
 }
 
@@ -122,6 +87,62 @@ app.MapControllers();
 
 // Health check dla Railway
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
+// Diagnostyka bazy — tymczasowy endpoint do debugowania
+app.MapGet("/debug/db", async (AppDbContext db) =>
+{
+    var result = new Dictionary<string, object>();
+
+    try
+    {
+        // 1. Sprawdź nazwy tabel
+        using var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name";
+        var tables = new List<string>();
+        using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+                tables.Add(reader.GetString(0));
+        }
+        result["tables"] = tables;
+
+        // 2. Sprawdź kolumny tabeli Technicians (jakakolwiek nazwa)
+        var techTable = tables.FirstOrDefault(t => t.Equals("Technicians", StringComparison.OrdinalIgnoreCase));
+        if (techTable != null)
+        {
+            cmd.CommandText = $"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{techTable}' ORDER BY ordinal_position";
+            var columns = new List<string>();
+            using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                    columns.Add($"{reader.GetString(0)} ({reader.GetString(1)})");
+            }
+            result["technicians_table_name"] = techTable;
+            result["technicians_columns"] = columns;
+        }
+        else
+        {
+            result["technicians_table_name"] = "NOT FOUND";
+        }
+
+        // 3. Ile techników w bazie
+        cmd.CommandText = techTable != null
+            ? $"SELECT COUNT(*) FROM \"{techTable}\""
+            : "SELECT 0";
+        result["technicians_count"] = (await cmd.ExecuteScalarAsync())?.ToString() ?? "0";
+
+        conn.Close();
+    }
+    catch (Exception ex)
+    {
+        result["error"] = ex.Message;
+    }
+
+    return Results.Ok(result);
+});
 
 app.Run();
 
