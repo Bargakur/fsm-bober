@@ -4,11 +4,14 @@ import Sidebar from './components/Sidebar';
 import OrderForm from './components/OrderForm';
 import OrderDetail from './components/OrderDetail';
 import SuggestionPanel from './components/SuggestionPanel';
+import AdminPanel from './components/AdminPanel';
 import LoginScreen from './components/LoginScreen';
 import type { UserInfo } from './components/LoginScreen';
 import { ROLE_LABELS } from './components/LoginScreen';
 import { setAuthToken, setOnUnauthorized } from './services/api';
 import type { Order, TechnicianSuggestion, CreateOrderResponse } from './types';
+
+type View = 'calendar' | 'admin';
 
 export default function App() {
   const [token, setToken] = useState<string | null>(() => {
@@ -20,6 +23,9 @@ export default function App() {
     const s = sessionStorage.getItem('fsm_user');
     return s ? JSON.parse(s) : null;
   });
+
+  // View state
+  const [currentView, setCurrentView] = useState<View>('calendar');
 
   // Modal states
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -94,37 +100,52 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar onNewOrder={handleNewOrder} />
+      <Sidebar
+        onNewOrder={handleNewOrder}
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        userRole={user.role}
+      />
 
       <main className="main">
         <header className="topbar">
-          <h1>Kalendarz zleceń</h1>
+          <h1>{currentView === 'admin' ? 'Administracja' : 'Kalendarz zleceń'}</h1>
           <div className="topbar-right">
             <div className="topbar-user">
               <span className="topbar-user-name">{user.fullName}</span>
               <span className="topbar-user-role">{ROLE_LABELS[user.role] || user.role}</span>
             </div>
             <button className="btn btn-secondary" onClick={handleLogout}>Wyloguj</button>
-            <button className="btn btn-primary" onClick={handleNewOrder}>
-              + Nowe zlecenie
-            </button>
+            {currentView === 'calendar' && (
+              <button className="btn btn-primary" onClick={handleNewOrder}>
+                + Nowe zlecenie
+              </button>
+            )}
           </div>
         </header>
 
-        <div className="calendar-container">
-          <ResourceCalendar
-            onDateSelect={handleDateSelect}
-            onOrderClick={handleOrderClick}
-            refreshKey={refreshKey}
-          />
-        </div>
+        {currentView === 'calendar' ? (
+          <>
+            <div className="calendar-container">
+              <ResourceCalendar
+                onDateSelect={handleDateSelect}
+                onOrderClick={handleOrderClick}
+                refreshKey={refreshKey}
+              />
+            </div>
 
-        <div className="legend">
-          <span className="legend-item"><i className="dot dot-draft" /> Szkic</span>
-          <span className="legend-item"><i className="dot dot-assigned" /> Przypisane</span>
-          <span className="legend-item"><i className="dot dot-progress" /> W trakcie</span>
-          <span className="legend-item"><i className="dot dot-completed" /> Zakończone</span>
-        </div>
+            <div className="legend">
+              <span className="legend-item"><i className="dot dot-draft" /> Szkic</span>
+              <span className="legend-item"><i className="dot dot-assigned" /> Przypisane</span>
+              <span className="legend-item"><i className="dot dot-progress" /> W trakcie</span>
+              <span className="legend-item"><i className="dot dot-completed" /> Zakończone</span>
+            </div>
+          </>
+        ) : currentView === 'admin' ? (
+          <div className="calendar-container">
+            <AdminPanel />
+          </div>
+        ) : null}
       </main>
 
       {showOrderForm && (

@@ -11,7 +11,10 @@ export interface Technician {
   id: number;
   fullName: string;
   phone: string;
+  homeLat: number;
+  homeLng: number;
   skills: string;
+  isActive: boolean;
 }
 
 export interface Order {

@@ -69,6 +69,43 @@ export async function getTreatments(): Promise<Treatment[]> {
   return request('/treatments');
 }
 
-export async function getTechnicians(): Promise<Technician[]> {
-  return request('/technicians');
+export async function getTechnicians(includeInactive = false): Promise<Technician[]> {
+  return request(`/technicians${includeInactive ? '?includeInactive=true' : ''}`);
+}
+
+// ---- Admin: Technicians CRUD ----
+
+export interface CreateTechnicianDto {
+  fullName: string;
+  phone: string;
+  homeLat: number;
+  homeLng: number;
+  skills: string;
+}
+
+export interface UpdateTechnicianDto {
+  fullName?: string;
+  phone?: string;
+  homeLat?: number;
+  homeLng?: number;
+  skills?: string;
+  isActive?: boolean;
+}
+
+export async function createTechnician(dto: CreateTechnicianDto): Promise<Technician> {
+  return request('/technicians', {
+    method: 'POST',
+    body: JSON.stringify(dto),
+  });
+}
+
+export async function updateTechnician(id: number, dto: UpdateTechnicianDto): Promise<Technician> {
+  return request(`/technicians/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dto),
+  });
+}
+
+export async function deleteTechnician(id: number): Promise<void> {
+  return request(`/technicians/${id}`, { method: 'DELETE' });
 }

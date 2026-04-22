@@ -805,6 +805,157 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   color: var(--text-muted);
 }
 
+/* ============================================
+   ADMIN PANEL
+   ============================================ */
+
+.admin-panel {
+  padding: 0 0 24px;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.admin-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.admin-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.admin-header .btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.15s;
+}
+.admin-alert-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.admin-alert-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.admin-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Table */
+.admin-table-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.admin-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.admin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: var(--bg-hover); }
+
+.row-inactive td {
+  opacity: 0.5;
+}
+
+.td-name { font-weight: 600; }
+.td-coords {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+/* Skill tags */
+.skill-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.skill-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* Status badges for admin */
+.status-active {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.status-inactive {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-icon-danger { color: var(--danger); }
+.btn-icon-danger:hover { background: var(--danger-bg); color: var(--danger); }
+.btn-icon-success { color: var(--success); }
+.btn-icon-success:hover { background: var(--success-bg); color: var(--success); }
+
+.confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.confirm-text {
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Field hint */
+.field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* ---- Animations ---- */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
