@@ -35,7 +35,7 @@ public class SuggestionService : ISuggestionService
         foreach (var tech in technicians)
         {
             // Filtruj po uprawnieniach
-            if (requiredSkill != null && !tech.Skills.Contains(requiredSkill))
+            if (requiredSkill != null && !tech.Specializations.Contains(requiredSkill))
                 continue;
 
             // Sprawdź dostępność

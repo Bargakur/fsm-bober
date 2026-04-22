@@ -17,16 +17,13 @@ public class Technician
     /// <summary>Długość geograficzna domu technika</summary>
     public double HomeLng { get; set; }
     
-    /// <summary>
-    /// Uprawnienia/kwalifikacje, np. "ddd,dezynsekcja".
-    /// System filtruje techników — jeśli zabieg wymaga "ddd",
-    /// technik bez tego skilla nie pojawi się w sugestiach.
-    /// </summary>
+    /// <summary>[Deprecated — zastąpione przez Specializations] Zachowane dla kompatybilności z bazą</summary>
     public string Skills { get; set; } = string.Empty;
 
     /// <summary>
-    /// Co robi technik — wartości z enum: "drabina,osy,szerszenie"
+    /// Co robi technik — wartości: "drabina,osy,szerszenie"
     /// Przechowywane jako comma-separated string.
+    /// System filtruje techników po tych wartościach przy sugestiach.
     /// </summary>
     public string Specializations { get; set; } = string.Empty;
     

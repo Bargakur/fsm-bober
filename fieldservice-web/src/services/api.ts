@@ -80,7 +80,6 @@ export interface CreateTechnicianDto {
   phone: string;
   homeLat: number;
   homeLng: number;
-  skills: string;
   specializations: string;
 }
 
@@ -89,7 +88,6 @@ export interface UpdateTechnicianDto {
   phone?: string;
   homeLat?: number;
   homeLng?: number;
-  skills?: string;
   specializations?: string;
   isActive?: boolean;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Pencil, Trash2, X, Check, RotateCcw, ChevronDown, ChevronRight, Phone, MapPin, Wrench, Shield } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, X, Check, RotateCcw, ChevronDown, ChevronRight, Phone, MapPin, Wrench } from 'lucide-react';
 import { getTechnicians, createTechnician, updateTechnician, deleteTechnician } from '../services/api';
 import type { Technician } from '../types';
 import type { CreateTechnicianDto } from '../services/api';
@@ -11,7 +11,6 @@ const EMPTY_FORM: CreateTechnicianDto = {
   phone: '',
   homeLat: 52.2297,
   homeLng: 21.0122,
-  skills: '',
   specializations: '',
 };
 
@@ -74,7 +73,6 @@ export default function AdminPanel() {
       phone: tech.phone,
       homeLat: tech.homeLat,
       homeLng: tech.homeLng,
-      skills: tech.skills,
       specializations: tech.specializations,
     });
     setSelectedSpecs(tech.specializations ? tech.specializations.split(',').filter(Boolean) : []);
@@ -188,17 +186,6 @@ export default function AdminPanel() {
               </div>
 
               <div className="field">
-                <label>Umiejętności (skills)</label>
-                <input
-                  type="text"
-                  value={form.skills}
-                  onChange={e => setForm({ ...form, skills: e.target.value })}
-                  placeholder="np. ddd,dezynsekcja"
-                />
-                <span className="field-hint">Oddzielone przecinkami</span>
-              </div>
-
-              <div className="field">
                 <label>Co robi</label>
                 <div className="spec-checkboxes">
                   {SPECIALIZATION_OPTIONS.map(spec => (
@@ -288,24 +275,6 @@ export default function AdminPanel() {
                               </div>
                             ) : (
                               <span className="text-muted">Nie ustawiono</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="tech-detail-item">
-                        <Shield size={14} />
-                        <div>
-                          <span className="tech-detail-label">Umiejętności</span>
-                          <div className="tech-detail-value">
-                            {tech.skills ? (
-                              <div className="skill-tags">
-                                {tech.skills.split(',').filter(Boolean).map(s => (
-                                  <span key={s} className="skill-tag skill-tag-secondary">{s.trim()}</span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-muted">Brak</span>
                             )}
                           </div>
                         </div>

@@ -17,9 +17,9 @@ public class TechniciansController : ControllerBase
 
     // ---- DTOs ----
     public record CreateTechnicianDto(
-        string FullName, string Phone, double HomeLat, double HomeLng, string Skills, string Specializations);
+        string FullName, string Phone, double HomeLat, double HomeLng, string Specializations);
     public record UpdateTechnicianDto(
-        string? FullName, string? Phone, double? HomeLat, double? HomeLng, string? Skills, string? Specializations, bool? IsActive);
+        string? FullName, string? Phone, double? HomeLat, double? HomeLng, string? Specializations, bool? IsActive);
 
     /// <summary>GET /api/technicians</summary>
     [HttpGet]
@@ -67,7 +67,6 @@ public class TechniciansController : ControllerBase
             Phone = dto.Phone,
             HomeLat = dto.HomeLat,
             HomeLng = dto.HomeLng,
-            Skills = dto.Skills,
             Specializations = dto.Specializations ?? "",
             IsActive = true,
         };
@@ -109,7 +108,6 @@ public class TechniciansController : ControllerBase
         if (dto.Phone != null) tech.Phone = dto.Phone;
         if (dto.HomeLat.HasValue) tech.HomeLat = dto.HomeLat.Value;
         if (dto.HomeLng.HasValue) tech.HomeLng = dto.HomeLng.Value;
-        if (dto.Skills != null) tech.Skills = dto.Skills;
         if (dto.Specializations != null) tech.Specializations = dto.Specializations;
         if (dto.IsActive.HasValue) tech.IsActive = dto.IsActive.Value;
 

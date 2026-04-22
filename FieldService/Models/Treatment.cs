@@ -23,7 +23,7 @@ public class Treatment
     
     /// <summary>
     /// Wymagane uprawnienia technika, np. "ddd".
-    /// Porównywane z Technician.Skills przy generowaniu sugestii.
+    /// Porównywane z Technician.Specializations przy generowaniu sugestii.
     /// </summary>
     public string? RequiredSkill { get; set; }
     

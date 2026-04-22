@@ -13,7 +13,6 @@ export interface Technician {
   phone: string;
   homeLat: number;
   homeLng: number;
-  skills: string;
   specializations: string;
   isActive: boolean;
 }
