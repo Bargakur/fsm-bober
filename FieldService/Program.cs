@@ -74,9 +74,42 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // EnsureCreated tworzy schemat jeśli baza nie istnieje, ale NIE kasuje danych
-    // Jeśli baza już istnieje z tabelami — nic nie robi
     db.Database.EnsureCreated();
+
+    // Dodaj brakujące kolumny — najpierw sprawdź prawdziwą nazwę tabeli
+    try
+    {
+        // Znajdź nazwę tabeli Technicians w bazie (może być "Technicians" lub "technicians")
+        using var conn = db.Database.GetDbConnection();
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT table_name FROM information_schema.tables
+            WHERE table_name ILIKE 'technicians' AND table_schema = 'public' LIMIT 1";
+        var tableName = cmd.ExecuteScalar()?.ToString();
+
+        if (tableName != null)
+        {
+            // Sprawdź czy kolumna istnieje
+            cmd.CommandText = $@"
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = '{tableName}' AND column_name ILIKE 'specializations'";
+            var exists = cmd.ExecuteScalar();
+
+            if (exists == null)
+            {
+                cmd.CommandText = $@"ALTER TABLE ""{tableName}"" ADD COLUMN ""Specializations"" text NOT NULL DEFAULT ''";
+                cmd.ExecuteNonQuery();
+                Console.WriteLine("[MIGRATION] Added Specializations column to Technicians");
+            }
+        }
+        conn.Close();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[MIGRATION WARNING] {ex.Message}");
+    }
+
     SeedData.Initialize(db);
 }
 
