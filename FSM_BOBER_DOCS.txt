@@ -28,8 +28,8 @@ FieldService/
 │
 ├── Models/
 │   ├── User.cs                         # Użytkownicy panelu (login, role, hash hasła)
-│   ├── Technician.cs                   # Technicy (imię, telefon, GPS domu, skills, specializations)
-│   ├── Treatment.cs                    # Rodzaje zabiegów (nazwa, czas, cena, wymagane skill)
+│   ├── Technician.cs                   # Technicy (imię, telefon, GPS domu, co robi/specializations)
+│   ├── Treatment.cs                    # Rodzaje zabiegów (nazwa, czas, cena, wymagana specjalizacja)
 │   ├── Order.cs                        # Zlecenia (klient, adres, zabieg, termin, status)
 │   ├── Availability.cs                 # Dostępność techników (dzień, godziny)
 │   ├── Protocol.cs                     # Protokół z zabiegu (zdjęcie, uwagi technika)
@@ -236,18 +236,23 @@ Role (od najniższej):
   handlowiec, starszy_handlowiec, admin, supervisor, superadmin
 
 Technicy (Warszawa):
-  1. Tomasz Mazur       — Śródmieście — skills: ddd, dezynsekcja — co robi: drabina, osy, szerszenie
-  2. Ewa Kaczmarek      — Żoliborz    — skills: dezynsekcja      — co robi: osy
-  3. Piotr Wójcik       — Mokotów     — skills: ddd, dezynsekcja — co robi: drabina, szerszenie
-  4. Karolina Zielińska — Bielany     — skills: dezynsekcja      — co robi: osy, szerszenie
-  5. Adam Nowakowski    — Ursynów     — skills: ddd              — co robi: drabina
+  1. Tomasz Mazur       — Śródmieście — co robi: drabina, osy, szerszenie
+  2. Ewa Kaczmarek      — Żoliborz    — co robi: osy
+  3. Piotr Wójcik       — Mokotów     — co robi: drabina, szerszenie
+  4. Karolina Zielińska — Bielany     — co robi: osy, szerszenie
+  5. Adam Nowakowski    — Ursynów     — co robi: drabina
 
 Zabiegi:
   1. Szczury                — 60 min  — 350 zł — wymaga: ddd
   2. Pluskwy                — 120 min — 600 zł — wymaga: dezynsekcja
   3. Zabezpieczenie balkonu — 120 min — 500 zł — brak wymagań
 
-Dostępność: wszyscy technicy pon-pt 08:00-16:00 (14 dni do przodu)
+Dostępność (zróżnicowane zmiany, 14 dni do przodu):
+  1. Tomasz Mazur       — pon-pt  07:00-15:00 (wczesna zmiana)
+  2. Ewa Kaczmarek      — pon-czw 09:00-17:00 (bez piątków)
+  3. Piotr Wójcik       — pon-pt  06:00-14:00 (najwcześniej)
+  4. Karolina Zielińska — pon-pt  10:00-18:00 (późna zmiana)
+  5. Adam Nowakowski    — pon-sob 08:00-16:00 (z sobotami)
 
 
 7. API ENDPOINTS
@@ -267,6 +272,7 @@ GET    /api/technicians                          Lista techników [AllowAnonymou
 GET    /api/technicians?includeInactive=true     Wszystkie (z nieaktywnymi) [Authorize]
 GET    /api/technicians/{id}                     Szczegóły technika
 GET    /api/technicians/{id}/availability?date=  Dostępność na dzień
+GET    /api/technicians/availability/bulk?date=  Dostępność wszystkich techników na dzień
 POST   /api/technicians                          Dodaj technika [admin/superadmin]
 PUT    /api/technicians/{id}                     Edytuj technika [admin/superadmin]
 DELETE /api/technicians/{id}                     Dezaktywuj technika [admin/superadmin]
@@ -292,7 +298,30 @@ Panel admin (Sidebar → Administracja):
   - CRUD techników wymaga roli admin/supervisor/superadmin
 
 
-9. TODO / PLANOWANE FUNKCJE
+9. UWAGI TECHNICZNE
+==============================================================
+
+Specjalizacje techników ("co robi"):
+  - Pole Technician.Specializations przechowuje wartości jako comma-separated string
+  - Dozwolone wartości: drabina, osy, szerszenie
+  - Treatment.RequiredSkill porównywane z Technician.Specializations przy sugestiach
+  - Pole Technician.Skills jest DEPRECATED — zachowane w modelu C# wyłącznie
+    dla kompatybilności z istniejącą kolumną w bazie Railway (EnsureCreated
+    nie usuwa kolumn). Nie jest używane w żadnym DTO, API ani frontendzie.
+
+EnsureCreated vs Migrations:
+  - Aktualnie baza tworzona przez EnsureCreated() + SeedData
+  - EnsureCreated NIE dodaje kolumn do istniejących tabel
+  - Migracja do EF Core Migrations jest planowana (patrz TODO)
+
+Dostępność na kalendarzu:
+  - Zielone bloki w kolumnach techników pokazują godziny pracy
+  - Dane pobierane z GET /api/technicians/availability/bulk?date=
+  - System NIE blokuje dodawania zleceń poza godzinami dostępności
+  - Dostępność wpływa tylko na sugestie techników (SuggestionService)
+
+
+10. TODO / PLANOWANE FUNKCJE
 ==============================================================
 
 [x] Geokodowanie adresów (Nominatim/OpenStreetMap)
@@ -305,6 +334,7 @@ Panel admin (Sidebar → Administracja):
 [x] Brute-force protection na login
 [x] Panel administracyjny — CRUD techników
 [x] Specjalizacje techników (co robi: drabina, osy, szerszenie)
+[x] Zielone bloki dostępności techników na kalendarzu
 [ ] EF Core Migrations (zamiast EnsureCreated) — POTRZEBNE!
 [ ] Address-first flow: wpisz adres -> filtruj techników w promieniu
 [ ] Upload zdjęć protokołów (MinIO)

@@ -55,6 +55,23 @@ public class TechniciansController : ControllerBase
             : Ok(new { available = true, avail.StartTime, avail.EndTime });
     }
 
+    /// <summary>GET /api/technicians/availability/bulk?date=2026-04-15 — dostępność wszystkich techników na dzień</summary>
+    [HttpGet("availability/bulk")]
+    public async Task<ActionResult> GetBulkAvailability([FromQuery] DateOnly date)
+    {
+        var availabilities = await _db.Availabilities
+            .Where(a => a.Date == date)
+            .Select(a => new
+            {
+                a.TechnicianId,
+                StartTime = a.StartTime.ToString("HH:mm"),
+                EndTime = a.EndTime.ToString("HH:mm"),
+            })
+            .ToListAsync();
+
+        return Ok(availabilities);
+    }
+
     /// <summary>POST /api/technicians — dodaj technika (admin/superadmin)</summary>
     [HttpPost]
     public async Task<ActionResult> Create([FromBody] CreateTechnicianDto dto)

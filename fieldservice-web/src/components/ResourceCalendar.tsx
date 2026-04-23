@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Order, Technician } from '../types';
-import { getOrders, getTechnicians } from '../services/api';
+import type { Order, Technician, TechnicianAvailability } from '../types';
+import { getOrders, getTechnicians, getBulkAvailability } from '../services/api';
 
 interface Props {
   onDateSelect: (date: string) => void;
@@ -66,27 +66,40 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
   const [date, setDate] = useState(todayStr());
   const [orders, setOrders] = useState<Order[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [availability, setAvailability] = useState<TechnicianAvailability[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     getTechnicians().then(setTechnicians).catch(() => {});
   }, []);
 
-  const loadOrders = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getOrders(date);
-      setOrders(data);
+      const [ordersData, availData] = await Promise.all([
+        getOrders(date),
+        getBulkAvailability(date),
+      ]);
+      setOrders(ordersData);
+      setAvailability(availData);
     } catch {
       setOrders([]);
+      setAvailability([]);
     } finally {
       setLoading(false);
     }
   }, [date]);
 
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders, refreshKey]);
+    loadData();
+  }, [loadData, refreshKey]);
+
+  // Mapa dostępności per technik
+  const availByTech = useMemo(() => {
+    const map = new Map<number, TechnicianAvailability>();
+    availability.forEach(a => map.set(a.technicianId, a));
+    return map;
+  }, [availability]);
 
   const isToday = date === todayStr();
 
@@ -188,8 +201,21 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
             ))}
           </div>
 
-          {columns.map(col => (
+          {columns.map(col => {
+            const avail = col.id != null ? availByTech.get(col.id) : null;
+            const availTop = avail ? timeToSlotOffset(avail.startTime) : 0;
+            const availHeight = avail ? timeDurationPx(avail.startTime, avail.endTime) : 0;
+
+            return (
             <div key={col.id ?? 'none'} className="rc-tech-col">
+              {/* Zielony blok dostępności */}
+              {avail && availHeight > 0 && (
+                <div
+                  className="rc-availability"
+                  style={{ top: availTop, height: availHeight }}
+                />
+              )}
+
               {/* Siatka godzinowa */}
               {timeSlots.map((slot, i) => (
                 <div
@@ -233,7 +259,8 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

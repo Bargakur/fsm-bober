@@ -71,3 +71,9 @@ export interface CreateOrderResponse {
   order: Order;
   suggestedTechnicians: TechnicianSuggestion[];
 }
+
+export interface TechnicianAvailability {
+  technicianId: number;
+  startTime: string;  // "HH:mm"
+  endTime: string;    // "HH:mm"
+}

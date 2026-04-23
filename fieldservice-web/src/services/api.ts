@@ -1,4 +1,4 @@
-import type { Order, Treatment, Technician, CreateOrderDto, CreateOrderResponse } from '../types';
+import type { Order, Treatment, Technician, CreateOrderDto, CreateOrderResponse, TechnicianAvailability } from '../types';
 
 // W produkcji (Railway) VITE_API_URL = adres backendu
 // Lokalnie puste → używa "/api" (proxy przez Vite)
@@ -71,6 +71,10 @@ export async function getTreatments(): Promise<Treatment[]> {
 
 export async function getTechnicians(includeInactive = false): Promise<Technician[]> {
   return request(`/technicians${includeInactive ? '?includeInactive=true' : ''}`);
+}
+
+export async function getBulkAvailability(date: string): Promise<TechnicianAvailability[]> {
+  return request(`/technicians/availability/bulk?date=${date}`);
 }
 
 // ---- Admin: Technicians CRUD ----

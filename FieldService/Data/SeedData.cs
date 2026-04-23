@@ -104,7 +104,7 @@ public static class SeedData
         }
     }
 
-    // ---- Dostępność techników (14 dni) ----
+    // ---- Dostępność techników (14 dni, zróżnicowane godziny) ----
     private static void SeedAvailabilities(AppDbContext db)
     {
         // Tylko dodaj jeśli w ogóle nie ma dostępności
@@ -113,20 +113,41 @@ public static class SeedData
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var technicians = db.Technicians.ToList();
 
-        foreach (var tech in technicians)
+        // Każdy technik ma inny schemat pracy — do testów
+        // Tomasz: 7-15 pon-pt (wczesna zmiana)
+        // Ewa: 9-17 pon-czw (krótszy tydzień)
+        // Piotr: 6-14 pon-pt (najwcześniej)
+        // Karolina: 10-18 pon-pt (późna zmiana)
+        // Adam: 8-16 pon-sob (z sobotami)
+        var schedules = new (int startH, int endH, bool includeSaturday)[]
         {
+            (7, 15, false),   // Tomasz
+            (9, 17, false),   // Ewa
+            (6, 14, false),   // Piotr
+            (10, 18, false),  // Karolina
+            (8, 16, true),    // Adam — pracuje też w soboty
+        };
+
+        for (int t = 0; t < technicians.Count && t < schedules.Length; t++)
+        {
+            var tech = technicians[t];
+            var (startH, endH, includeSaturday) = schedules[t];
+
             for (int i = 0; i < 14; i++)
             {
                 var date = today.AddDays(i);
-                if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-                    continue;
+                if (date.DayOfWeek == DayOfWeek.Sunday) continue;
+                if (date.DayOfWeek == DayOfWeek.Saturday && !includeSaturday) continue;
+
+                // Ewa nie pracuje w piątki
+                if (t == 1 && date.DayOfWeek == DayOfWeek.Friday) continue;
 
                 db.Availabilities.Add(new Availability
                 {
                     TechnicianId = tech.Id,
                     Date = date,
-                    StartTime = new TimeOnly(8, 0),
-                    EndTime = new TimeOnly(16, 0),
+                    StartTime = new TimeOnly(startH, 0),
+                    EndTime = new TimeOnly(endH, 0),
                 });
             }
         }

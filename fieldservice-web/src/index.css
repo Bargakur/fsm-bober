@@ -525,6 +525,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 .rc-slot-hour { border-top: 1px solid var(--border); }
 .rc-slot-half { border-top: 1px dashed #eee; }
 
+/* Availability block — zielone tło dostępności */
+.rc-availability {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(34, 197, 94, 0.10);
+  border-left: 3px solid rgba(34, 197, 94, 0.45);
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* Event block */
 .rc-event {
   position: absolute;
