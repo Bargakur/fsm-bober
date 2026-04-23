@@ -113,7 +113,6 @@ export default function App() {
           <div className="topbar-right">
             <div className="topbar-user">
               <span className="topbar-user-name">{user.fullName}</span>
-              <span className="topbar-user-role">{ROLE_LABELS[user.role] || user.role}</span>
             </div>
             <button className="btn btn-secondary" onClick={handleLogout}>Wyloguj</button>
             {currentView === 'calendar' && (
