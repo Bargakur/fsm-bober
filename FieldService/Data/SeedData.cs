@@ -57,6 +57,7 @@ public static class SeedData
             ("Szczury", 60, "DDD", 350, "ddd"),
             ("Pluskwy", 120, "Dezynsekcja", 600, "dezynsekcja"),
             ("Zabezpieczenie balkonu", 120, "Zabezpieczenia", 500, null),
+            ("Wizja lokalna", 30, "Inne", 0, null),
         };
 
         foreach (var (name, duration, category, price, skill) in treatments)

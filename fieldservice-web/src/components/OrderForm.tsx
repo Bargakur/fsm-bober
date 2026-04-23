@@ -36,8 +36,6 @@ export default function OrderForm({ initialDate, onClose, onCreated }: Props) {
     getTreatments().then(setTreatments).catch(() => {});
   }, []);
 
-  const selectedTreatment = treatments.find(t => t.id === form.treatmentId);
-
   const set = (field: string, value: string | number) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
@@ -141,19 +139,16 @@ export default function OrderForm({ initialDate, onClose, onCreated }: Props) {
               value={form.treatmentId}
               onChange={e => {
                 const id = Number(e.target.value);
-                const t = treatments.find(tr => tr.id === id);
                 setForm(prev => ({
                   ...prev,
                   treatmentId: id,
-                  duration: t ? String(t.durationMinutes) : '',
-                  price: t ? String(t.defaultPrice) : '',
                 }));
               }}
             >
               <option value={0}>— Wybierz zabieg —</option>
               {treatments.map(t => (
                 <option key={t.id} value={t.id}>
-                  {t.name} ({t.durationMinutes} min — {t.defaultPrice} zł)
+                  {t.name}
                 </option>
               ))}
             </select>

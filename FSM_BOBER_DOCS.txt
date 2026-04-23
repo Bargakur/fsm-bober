@@ -246,6 +246,7 @@ Zabiegi:
   1. Szczury                — 60 min  — 350 zł — wymaga: ddd
   2. Pluskwy                — 120 min — 600 zł — wymaga: dezynsekcja
   3. Zabezpieczenie balkonu — 120 min — 500 zł — brak wymagań
+  4. Wizja lokalna          — 30 min  — 0 zł   — brak wymagań
 
 Dostępność (zróżnicowane zmiany, 14 dni do przodu):
   1. Tomasz Mazur       — pon-pt  07:00-15:00 (wczesna zmiana)
