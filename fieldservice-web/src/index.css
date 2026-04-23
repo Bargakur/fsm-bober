@@ -539,8 +539,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 /* Event block */
 .rc-event {
   position: absolute;
-  left: 3px;
-  right: 3px;
   border-radius: 6px;
   padding: 4px 7px;
   color: #fff;
@@ -549,6 +547,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   z-index: 1;
   transition: opacity 0.15s, transform 0.1s;
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  box-sizing: border-box;
 }
 .rc-event:hover { opacity: 0.9; transform: scale(1.01); }
 

@@ -62,6 +62,60 @@ function timeDurationPx(start: string, end: string): number {
   return ((e - s) / 30) * SLOT_HEIGHT;
 }
 
+/** Oblicz pozycje kolumn dla nakładających się zleceń */
+function layoutOverlapping(orders: Order[]): Map<number, { col: number; totalCols: number }> {
+  const sorted = [...orders].sort((a, b) =>
+    timeToMinutes(a.scheduledStart) - timeToMinutes(b.scheduledStart)
+  );
+
+  // Grupuj w klastry nakładających się zleceń
+  const clusters: Order[][] = [];
+  for (const order of sorted) {
+    const start = timeToMinutes(order.scheduledStart);
+    let placed = false;
+    for (const cluster of clusters) {
+      const clusterEnd = Math.max(...cluster.map(o => timeToMinutes(o.scheduledEnd)));
+      if (start < clusterEnd) {
+        cluster.push(order);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) clusters.push([order]);
+  }
+
+  const result = new Map<number, { col: number; totalCols: number }>();
+
+  for (const cluster of clusters) {
+    // Greedy column assignment wewnątrz klastra
+    const cols: Order[][] = [];
+    for (const order of cluster) {
+      const start = timeToMinutes(order.scheduledStart);
+      let placed = false;
+      for (let c = 0; c < cols.length; c++) {
+        const lastInCol = cols[c][cols[c].length - 1];
+        if (timeToMinutes(lastInCol.scheduledEnd) <= start) {
+          cols[c].push(order);
+          result.set(order.id, { col: c, totalCols: 0 });
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        result.set(order.id, { col: cols.length, totalCols: 0 });
+        cols.push([order]);
+      }
+    }
+    // Ustaw totalCols dla całego klastra
+    for (const order of cluster) {
+      const r = result.get(order.id)!;
+      r.totalCols = cols.length;
+    }
+  }
+
+  return result;
+}
+
 export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKey }: Props) {
   const [date, setDate] = useState(todayStr());
   const [orders, setOrders] = useState<Order[]>([]);
@@ -226,38 +280,48 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
                 />
               ))}
 
-              {/* Bloki zleceń */}
-              {(ordersByTech.get(col.id) || []).map(order => {
-                const top = timeToSlotOffset(order.scheduledStart);
-                const height = Math.max(timeDurationPx(order.scheduledStart, order.scheduledEnd), SLOT_HEIGHT / 2);
-                const bgColor = col.id != null ? col.color : STATUS_COLORS[order.status] || '#94a3b8';
+              {/* Bloki zleceń (z obsługą nakładania) */}
+              {(() => {
+                const colOrders = ordersByTech.get(col.id) || [];
+                const layout = layoutOverlapping(colOrders);
 
-                return (
-                  <div
-                    key={order.id}
-                    className="rc-event"
-                    style={{
-                      top,
-                      height,
-                      backgroundColor: bgColor,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOrderClick(order);
-                    }}
-                  >
-                    <div className="rc-event-time">
-                      {order.scheduledStart?.substring(0, 5)} – {order.scheduledEnd?.substring(0, 5)}
+                return colOrders.map(order => {
+                  const top = timeToSlotOffset(order.scheduledStart);
+                  const height = Math.max(timeDurationPx(order.scheduledStart, order.scheduledEnd), SLOT_HEIGHT / 2);
+                  const bgColor = col.id != null ? col.color : STATUS_COLORS[order.status] || '#94a3b8';
+                  const pos = layout.get(order.id) || { col: 0, totalCols: 1 };
+                  const widthPct = 100 / pos.totalCols;
+                  const leftPct = pos.col * widthPct;
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="rc-event"
+                      style={{
+                        top,
+                        height,
+                        backgroundColor: bgColor,
+                        left: `calc(${leftPct}% + 2px)`,
+                        width: `calc(${widthPct}% - 4px)`,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOrderClick(order);
+                      }}
+                    >
+                      <div className="rc-event-time">
+                        {order.scheduledStart?.substring(0, 5)} – {order.scheduledEnd?.substring(0, 5)}
+                      </div>
+                      <div className="rc-event-title">
+                        {order.treatment?.name || 'Zabieg'}
+                      </div>
+                      <div className="rc-event-customer">
+                        {order.customerName}
+                      </div>
                     </div>
-                    <div className="rc-event-title">
-                      {order.treatment?.name || 'Zabieg'}
-                    </div>
-                    <div className="rc-event-customer">
-                      {order.customerName}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
             );
           })}
