@@ -211,8 +211,8 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
   const visibleTechnicians = useMemo(() => {
     if (!filter) return technicians;
     return technicians.filter(t => {
-      // Sprawdź specjalizację
-      if (filter.requiredSkill) {
+      // Sprawdź specjalizację (pomiń gdy zabieg nie wymaga żadnej)
+      if (filter.requiredSkill && filter.requiredSkill.trim().length > 0) {
         const specs = t.specializations?.split(',').map(s => s.trim()).filter(Boolean) || [];
         if (!specs.includes(filter.requiredSkill)) return false;
       }
