@@ -20,6 +20,38 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const CITIES: [string, number, number][] = [
+  ['Warszawa', 52.2297, 21.0122],
+  ['Kraków', 50.0647, 19.9450],
+  ['Wrocław', 51.1079, 17.0385],
+  ['Poznań', 52.4064, 16.9252],
+  ['Gdańsk', 54.3520, 18.6466],
+  ['Łódź', 51.7592, 19.4560],
+  ['Szczecin', 53.4285, 14.5528],
+  ['Lublin', 51.2465, 22.5684],
+  ['Katowice', 50.2649, 19.0238],
+  ['Bydgoszcz', 53.1235, 18.0084],
+  ['Białystok', 53.1325, 23.1688],
+  ['Rzeszów', 50.0412, 21.9991],
+  ['Olsztyn', 53.7784, 20.4801],
+  ['Kielce', 50.8661, 20.6286],
+  ['Radom', 51.4027, 21.1471],
+  ['Toruń', 53.0138, 18.5984],
+  ['Opole', 50.6751, 17.9213],
+  ['Zielona Góra', 51.9356, 15.5062],
+  ['Gorzów Wlkp.', 52.7325, 15.2369],
+];
+
+function nearestCity(lat: number, lng: number): string {
+  let best = CITIES[0][0];
+  let bestDist = Infinity;
+  for (const [name, cLat, cLng] of CITIES) {
+    const d = (lat - cLat) ** 2 + (lng - cLng) ** 2;
+    if (d < bestDist) { bestDist = d; best = name; }
+  }
+  return best;
+}
+
 interface Props {
   onDateSelect: (date: string, technicianId?: number) => void;
   onOrderClick: (order: Order) => void;
@@ -207,8 +239,8 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
   }, [orders, visibleTechnicians]);
 
   // Kolumny: nieprzypisane + technicy
-  const columns: { id: number | null; name: string; color: string }[] = useMemo(() => {
-    const cols: { id: number | null; name: string; color: string }[] = [];
+  const columns: { id: number | null; name: string; city?: string; color: string }[] = useMemo(() => {
+    const cols: { id: number | null; name: string; city?: string; color: string }[] = [];
 
     // Nieprzypisane — tylko jeśli są takie zlecenia
     const unassigned = ordersByTech.get(null) || [];
@@ -217,7 +249,7 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
     }
 
     visibleTechnicians.forEach((t, i) => {
-      cols.push({ id: t.id, name: t.fullName, color: TECH_COLORS[i % TECH_COLORS.length] });
+      cols.push({ id: t.id, name: t.fullName, city: nearestCity(t.homeLat, t.homeLng), color: TECH_COLORS[i % TECH_COLORS.length] });
     });
 
     return cols;
@@ -272,6 +304,7 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
               style={{ borderBottom: `3px solid ${col.color}` }}
             >
               <span className="rc-col-name">{col.name}</span>
+              {col.city && <span className="rc-col-city">{col.city}</span>}
               <span className="rc-col-count">
                 {(ordersByTech.get(col.id) || []).length} zlec.
               </span>

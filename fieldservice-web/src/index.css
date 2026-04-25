@@ -500,6 +500,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   gap: 2px;
 }
 .rc-col-name { font-size: 13px; font-weight: 600; }
+.rc-col-city { font-size: 11px; color: var(--text-muted); font-weight: 400; }
 .rc-col-count { font-size: 11px; color: var(--text-muted); }
 
 /* Time column */
