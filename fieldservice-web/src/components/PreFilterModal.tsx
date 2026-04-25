@@ -29,8 +29,8 @@ export default function PreFilterModal({ onFilter, onClose }: Props) {
   }, []);
 
   const selectedTreatment = treatments.find(t => t.id === treatmentId);
-  const hasAddress = address.trim().length > 0 && lat !== null && lng !== null;
-  const canSubmit = hasAddress && treatmentId > 0 && selectedTreatment;
+  const hasLocation = lat !== null && lng !== null;
+  const canSubmit = hasLocation && treatmentId > 0 && selectedTreatment;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
