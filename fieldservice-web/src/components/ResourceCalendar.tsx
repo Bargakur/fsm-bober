@@ -4,7 +4,7 @@ import type { Order, Technician, TechnicianAvailability } from '../types';
 import { getOrders, getTechnicians, getBulkAvailability } from '../services/api';
 
 interface Props {
-  onDateSelect: (date: string) => void;
+  onDateSelect: (date: string, technicianId?: number) => void;
   onOrderClick: (order: Order) => void;
   refreshKey: number;
 }
@@ -22,10 +22,10 @@ const TECH_COLORS = [
   '#f59e0b', '#ef4444', '#ec4899', '#6366f1',
 ];
 
-const SLOT_HEIGHT = 48; // px per 30min slot
+const SLOT_HEIGHT = 24; // px per 15min slot
 const START_HOUR = 6;
 const END_HOUR = 20;
-const TOTAL_SLOTS = (END_HOUR - START_HOUR) * 2; // 30-min slots
+const TOTAL_SLOTS = (END_HOUR - START_HOUR) * 4; // 15-min slots
 
 function todayStr(): string {
   const d = new Date();
@@ -53,13 +53,13 @@ function timeToMinutes(time: string): number {
 
 function timeToSlotOffset(time: string): number {
   const mins = timeToMinutes(time);
-  return ((mins - START_HOUR * 60) / 30) * SLOT_HEIGHT;
+  return ((mins - START_HOUR * 60) / 15) * SLOT_HEIGHT;
 }
 
 function timeDurationPx(start: string, end: string): number {
   const s = timeToMinutes(start);
   const e = timeToMinutes(end);
-  return ((e - s) / 30) * SLOT_HEIGHT;
+  return ((e - s) / 15) * SLOT_HEIGHT;
 }
 
 /** Oblicz pozycje kolumn dla nakładających się zleceń */
@@ -194,13 +194,15 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
     const slots: string[] = [];
     for (let h = START_HOUR; h < END_HOUR; h++) {
       slots.push(`${String(h).padStart(2, '0')}:00`);
+      slots.push(`${String(h).padStart(2, '0')}:15`);
       slots.push(`${String(h).padStart(2, '0')}:30`);
+      slots.push(`${String(h).padStart(2, '0')}:45`);
     }
     return slots;
   }, []);
 
   const handleColumnClick = (colId: number | null, slotTime: string) => {
-    onDateSelect(`${date}T${slotTime}:00`);
+    onDateSelect(`${date}T${slotTime}:00`, colId ?? undefined);
   };
 
   return (
@@ -247,10 +249,10 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
             {timeSlots.map((slot, i) => (
               <div
                 key={slot}
-                className={`rc-time-cell ${i % 2 === 0 ? 'rc-time-hour' : 'rc-time-half'}`}
+                className={`rc-time-cell ${i % 4 === 0 ? 'rc-time-hour' : i % 2 === 0 ? 'rc-time-half' : 'rc-time-quarter'}`}
                 style={{ height: SLOT_HEIGHT }}
               >
-                {i % 2 === 0 ? slot : ''}
+                {i % 4 === 0 ? slot : ''}
               </div>
             ))}
           </div>
@@ -274,7 +276,7 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
               {timeSlots.map((slot, i) => (
                 <div
                   key={slot}
-                  className={`rc-slot ${i % 2 === 0 ? 'rc-slot-hour' : 'rc-slot-half'}`}
+                  className={`rc-slot ${i % 4 === 0 ? 'rc-slot-hour' : i % 2 === 0 ? 'rc-slot-half' : 'rc-slot-quarter'}`}
                   style={{ height: SLOT_HEIGHT }}
                   onClick={() => handleColumnClick(col.id, slot)}
                 />

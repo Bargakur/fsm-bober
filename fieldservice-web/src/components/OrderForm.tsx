@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import type { Treatment, CreateOrderDto, CreateOrderResponse } from '../types';
-import { getTreatments, createOrder } from '../services/api';
+import type { Treatment, Technician, CreateOrderDto, CreateOrderResponse } from '../types';
+import { getTreatments, getTechnicians, createOrder, assignTechnician } from '../services/api';
 import AddressInput from './AddressInput';
 
 interface Props {
   initialDate?: string;
+  initialTechnicianId?: number;
   onClose: () => void;
   onCreated: (response: CreateOrderResponse) => void;
 }
 
-export default function OrderForm({ initialDate, onClose, onCreated }: Props) {
+export default function OrderForm({ initialDate, initialTechnicianId, onClose, onCreated }: Props) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<number | undefined>(initialTechnicianId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +37,7 @@ export default function OrderForm({ initialDate, onClose, onCreated }: Props) {
 
   useEffect(() => {
     getTreatments().then(setTreatments).catch(() => {});
+    getTechnicians().then(setTechnicians).catch(() => {});
   }, []);
 
   const set = (field: string, value: string | number) =>
@@ -67,6 +71,11 @@ export default function OrderForm({ initialDate, onClose, onCreated }: Props) {
       };
 
       const response = await createOrder(dto);
+      if (selectedTechnicianId) {
+        await assignTechnician(response.order.id, selectedTechnicianId);
+        response.order.technicianId = selectedTechnicianId;
+        response.order.status = 'assigned';
+      }
       onCreated(response);
     } catch (err: any) {
       setError(err.message || 'Błąd tworzenia zlecenia');
@@ -187,6 +196,25 @@ export default function OrderForm({ initialDate, onClose, onCreated }: Props) {
               rows={2}
               placeholder="Np. Mieszkanie 3-pokojowe, 65m², kuchnia i łazienka"
             />
+          </div>
+
+          {/* --- Technik --- */}
+          <div className="form-section-label">Technik</div>
+
+          <div className="field">
+            <label>Przypisany technik</label>
+            <select
+              value={selectedTechnicianId ?? 0}
+              onChange={e => {
+                const val = Number(e.target.value);
+                setSelectedTechnicianId(val || undefined);
+              }}
+            >
+              <option value={0}>— Bez przypisania (szkic) —</option>
+              {technicians.map(t => (
+                <option key={t.id} value={t.id}>{t.fullName}</option>
+              ))}
+            </select>
           </div>
 
           {/* --- Termin --- */}

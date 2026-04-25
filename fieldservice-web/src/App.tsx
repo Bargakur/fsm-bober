@@ -30,6 +30,7 @@ export default function App() {
   // Modal states
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<number | undefined>();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [pendingAssignment, setPendingAssignment] = useState<{
     order: Order;
@@ -65,13 +66,15 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  const handleDateSelect = (dateStr: string) => {
+  const handleDateSelect = (dateStr: string, technicianId?: number) => {
     setSelectedDate(dateStr);
+    setSelectedTechnicianId(technicianId);
     setShowOrderForm(true);
   };
 
   const handleNewOrder = () => {
     setSelectedDate(undefined);
+    setSelectedTechnicianId(undefined);
     setShowOrderForm(true);
   };
 
@@ -150,6 +153,7 @@ export default function App() {
       {showOrderForm && (
         <OrderForm
           initialDate={selectedDate}
+          initialTechnicianId={selectedTechnicianId}
           onClose={() => setShowOrderForm(false)}
           onCreated={handleOrderCreated}
         />

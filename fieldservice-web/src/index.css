@@ -508,7 +508,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   box-sizing: border-box;
 }
 .rc-time-hour { border-top: 1px solid var(--border); }
-.rc-time-half { border-top: 1px dashed #eee; }
+.rc-time-half { border-top: 1px dashed #ddd; }
+.rc-time-quarter { border-top: none; }
 
 /* Technician column */
 .rc-tech-col {
@@ -523,7 +524,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 }
 .rc-slot:hover { background: rgba(200, 113, 46, 0.04); }
 .rc-slot-hour { border-top: 1px solid var(--border); }
-.rc-slot-half { border-top: 1px dashed #eee; }
+.rc-slot-half { border-top: 1px dashed #ddd; }
+.rc-slot-quarter { border-top: none; }
 
 /* Availability block — zielone tło dostępności */
 .rc-availability {
