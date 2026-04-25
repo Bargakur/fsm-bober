@@ -35,6 +35,8 @@ export interface Order {
   paymentMethod?: string;
   price: number;
   notes?: string;
+  createdByUserId?: number;
+  createdBy?: { id: number; fullName: string; role: string };
   treatment?: Treatment;
   technician?: Technician;
 }

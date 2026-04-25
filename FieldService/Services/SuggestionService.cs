@@ -42,10 +42,14 @@ public class SuggestionService : ISuggestionService
             var availability = tech.Availabilities.FirstOrDefault();
             var fitLevel = "available";
 
-            if (availability != null)
+            if (availability == null)
             {
-                if (startTime < availability.StartTime) continue;
-                if (endTime > availability.EndTime) fitLevel = "warning";
+                fitLevel = "warning"; // brak ustawionej dostępności
+            }
+            else
+            {
+                if (startTime < availability.StartTime) fitLevel = "warning"; // przed zmianą
+                if (endTime > availability.EndTime) fitLevel = "warning";     // po zmianie
             }
 
             // Oblicz odległość (z domu lub ostatniego zlecenia)

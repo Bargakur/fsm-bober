@@ -105,6 +105,16 @@ export default function OrderDetail({ order, onClose, onAssign }: Props) {
             </div>
           )}
 
+          {order.createdBy && (
+            <div className="detail-row">
+              <User size={16} />
+              <div>
+                <strong>Zapisał/a</strong>
+                <span className="detail-sub">{order.createdBy.fullName}</span>
+              </div>
+            </div>
+          )}
+
           {order.notes && (
             <div className="detail-notes">
               <strong>Uwagi:</strong>

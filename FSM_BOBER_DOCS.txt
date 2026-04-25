@@ -69,7 +69,7 @@ fieldservice-web/
 │
 └── src/
     ├── main.tsx                         # Punkt wejścia React
-    ├── App.tsx                          # Layout: Sidebar + Calendar/Admin + modals + auth
+    ├── App.tsx                          # Layout: Sidebar + Calendar/Admin + modals + auth (topbar: tylko nazwa użytkownika, bez roli)
     ├── index.css                        # Wszystkie style (zmienne CSS, komponenty)
     ├── vite-env.d.ts                    # TypeScript deklaracje env vars
     │

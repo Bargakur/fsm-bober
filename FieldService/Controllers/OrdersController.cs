@@ -33,6 +33,7 @@ public class OrdersController : ControllerBase
         var orders = await _db.Orders
             .Include(o => o.Treatment)
             .Include(o => o.Technician)
+            .Include(o => o.CreatedBy)
             .Where(o => o.ScheduledDate == date)
             .OrderBy(o => o.ScheduledStart)
             .ToListAsync();

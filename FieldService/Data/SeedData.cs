@@ -54,8 +54,8 @@ public static class SeedData
     {
         var treatments = new (string Name, int Duration, string Category, decimal Price, string? Skill)[]
         {
-            ("Szczury", 60, "DDD", 350, "ddd"),
-            ("Pluskwy", 120, "Dezynsekcja", 600, "dezynsekcja"),
+            ("Szczury", 60, "DDD", 350, null),
+            ("Pluskwy", 120, "Dezynsekcja", 600, null),
             ("Zabezpieczenie balkonu", 120, "Zabezpieczenia", 500, null),
             ("Wizja lokalna", 30, "Inne", 0, null),
         };
