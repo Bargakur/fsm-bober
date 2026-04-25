@@ -62,7 +62,16 @@ public static class SeedData
 
         foreach (var (name, duration, category, price, skill) in treatments)
         {
-            if (!db.Treatments.Any(t => t.Name == name))
+            var existing = db.Treatments.FirstOrDefault(t => t.Name == name);
+            if (existing != null)
+            {
+                // Aktualizuj istniejące zabiegi (np. zmiana RequiredSkill)
+                existing.DurationMinutes = duration;
+                existing.Category = category;
+                existing.DefaultPrice = price;
+                existing.RequiredSkill = skill;
+            }
+            else
             {
                 db.Treatments.Add(new Treatment
                 {
