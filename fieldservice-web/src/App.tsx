@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import ResourceCalendar from './components/ResourceCalendar';
+import type { CalendarFilter } from './components/ResourceCalendar';
 import Sidebar from './components/Sidebar';
 import OrderForm from './components/OrderForm';
 import OrderDetail from './components/OrderDetail';
 import SuggestionPanel from './components/SuggestionPanel';
+import PreFilterModal from './components/PreFilterModal';
+import type { PreFilterResult } from './components/PreFilterModal';
 import AdminPanel from './components/AdminPanel';
 import LoginScreen from './components/LoginScreen';
 import type { UserInfo } from './components/LoginScreen';
@@ -28,6 +31,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<View>('calendar');
 
   // Modal states
+  const [showPreFilter, setShowPreFilter] = useState(false);
+  const [preFilter, setPreFilter] = useState<PreFilterResult | null>(null);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<number | undefined>();
@@ -75,11 +80,22 @@ export default function App() {
   const handleNewOrder = () => {
     setSelectedDate(undefined);
     setSelectedTechnicianId(undefined);
-    setShowOrderForm(true);
+    setPreFilter(null);
+    setShowPreFilter(true);
+  };
+
+  const handlePreFilterDone = (result: PreFilterResult) => {
+    setPreFilter(result);
+    setShowPreFilter(false);
+  };
+
+  const handleClearFilter = () => {
+    setPreFilter(null);
   };
 
   const handleOrderCreated = (response: CreateOrderResponse) => {
     setShowOrderForm(false);
+    setPreFilter(null);
     setRefreshKey(k => k + 1);
     setPendingAssignment({
       order: response.order,
@@ -128,11 +144,28 @@ export default function App() {
 
         {currentView === 'calendar' ? (
           <>
+            {preFilter && (
+              <div className="filter-bar">
+                <span className="filter-bar-label">
+                  Filtr: <strong>{preFilter.treatment.name}</strong> · {preFilter.address}
+                </span>
+                <button className="btn btn-secondary btn-sm" onClick={handleClearFilter}>
+                  ✕ Wyczyść filtr
+                </button>
+              </div>
+            )}
+
             <div className="calendar-container">
               <ResourceCalendar
                 onDateSelect={handleDateSelect}
                 onOrderClick={handleOrderClick}
                 refreshKey={refreshKey}
+                filter={preFilter ? {
+                  treatmentId: preFilter.treatmentId,
+                  requiredSkill: preFilter.treatment.requiredSkill,
+                  lat: preFilter.lat,
+                  lng: preFilter.lng,
+                } : undefined}
               />
             </div>
 
@@ -150,10 +183,21 @@ export default function App() {
         ) : null}
       </main>
 
+      {showPreFilter && (
+        <PreFilterModal
+          onFilter={handlePreFilterDone}
+          onClose={() => setShowPreFilter(false)}
+        />
+      )}
+
       {showOrderForm && (
         <OrderForm
           initialDate={selectedDate}
           initialTechnicianId={selectedTechnicianId}
+          initialAddress={preFilter?.address}
+          initialLat={preFilter?.lat}
+          initialLng={preFilter?.lng}
+          initialTreatmentId={preFilter?.treatmentId}
           onClose={() => setShowOrderForm(false)}
           onCreated={handleOrderCreated}
         />

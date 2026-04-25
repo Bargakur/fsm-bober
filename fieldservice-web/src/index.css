@@ -130,6 +130,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 .fc .fc-col-header-cell { font-size: 13px; font-weight: 500; }
 .fc td, .fc th { border-color: var(--border) !important; }
 
+/* ---- Filter bar ---- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 28px;
+  background: #fef3c7;
+  border-bottom: 1px solid #fbbf24;
+  font-size: 13px;
+}
+.filter-bar-label { color: #92400e; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
 /* ---- Legend ---- */
 .legend { display: flex; gap: 20px; padding: 8px 28px 20px; }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }

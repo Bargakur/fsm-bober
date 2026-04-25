@@ -3,10 +3,28 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Order, Technician, TechnicianAvailability } from '../types';
 import { getOrders, getTechnicians, getBulkAvailability } from '../services/api';
 
+export interface CalendarFilter {
+  treatmentId: number;
+  requiredSkill?: string;
+  lat: number;
+  lng: number;
+}
+
+/** Haversine — odległość w km między dwoma punktami GPS */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 interface Props {
   onDateSelect: (date: string, technicianId?: number) => void;
   onOrderClick: (order: Order) => void;
   refreshKey: number;
+  filter?: CalendarFilter;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -116,7 +134,7 @@ function layoutOverlapping(orders: Order[]): Map<number, { col: number; totalCol
   return result;
 }
 
-export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKey }: Props) {
+export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKey, filter }: Props) {
   const [date, setDate] = useState(todayStr());
   const [orders, setOrders] = useState<Order[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -157,12 +175,28 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
 
   const isToday = date === todayStr();
 
+  // Filtruj techników wg prefiltra (specjalizacja + odległość 250km)
+  const visibleTechnicians = useMemo(() => {
+    if (!filter) return technicians;
+    return technicians.filter(t => {
+      // Sprawdź specjalizację
+      if (filter.requiredSkill) {
+        const specs = t.specializations?.split(',').map(s => s.trim()).filter(Boolean) || [];
+        if (!specs.includes(filter.requiredSkill)) return false;
+      }
+      // Sprawdź odległość (z domu)
+      const dist = haversineKm(filter.lat, filter.lng, t.homeLat, t.homeLng);
+      if (dist > 250) return false;
+      return true;
+    });
+  }, [technicians, filter]);
+
   // Grupuj zlecenia wg technika (+ nieprzypisane)
   const ordersByTech = useMemo(() => {
     const map = new Map<number | null, Order[]>();
     // Inicjalizuj dla każdego technika
     map.set(null, []); // nieprzypisane
-    technicians.forEach(t => map.set(t.id, []));
+    visibleTechnicians.forEach(t => map.set(t.id, []));
     // Rozłóż zlecenia
     orders.forEach(o => {
       const key = o.technicianId ?? null;
@@ -170,7 +204,7 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
       map.get(key)!.push(o);
     });
     return map;
-  }, [orders, technicians]);
+  }, [orders, visibleTechnicians]);
 
   // Kolumny: nieprzypisane + technicy
   const columns: { id: number | null; name: string; color: string }[] = useMemo(() => {
@@ -182,12 +216,12 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
       cols.push({ id: null, name: 'Nieprzypisane', color: '#94a3b8' });
     }
 
-    technicians.forEach((t, i) => {
+    visibleTechnicians.forEach((t, i) => {
       cols.push({ id: t.id, name: t.fullName, color: TECH_COLORS[i % TECH_COLORS.length] });
     });
 
     return cols;
-  }, [technicians, ordersByTech]);
+  }, [visibleTechnicians, ordersByTech]);
 
   // Generuj sloty czasowe
   const timeSlots = useMemo(() => {

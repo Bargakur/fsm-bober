@@ -7,11 +7,15 @@ import AddressInput from './AddressInput';
 interface Props {
   initialDate?: string;
   initialTechnicianId?: number;
+  initialAddress?: string;
+  initialLat?: number;
+  initialLng?: number;
+  initialTreatmentId?: number;
   onClose: () => void;
   onCreated: (response: CreateOrderResponse) => void;
 }
 
-export default function OrderForm({ initialDate, initialTechnicianId, onClose, onCreated }: Props) {
+export default function OrderForm({ initialDate, initialTechnicianId, initialAddress, initialLat, initialLng, initialTreatmentId, onClose, onCreated }: Props) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<number | undefined>(initialTechnicianId);
@@ -22,10 +26,10 @@ export default function OrderForm({ initialDate, initialTechnicianId, onClose, o
     customerName: '',
     customerPhone: '',
     contactPhone: '',
-    address: '',
-    addressLat: null as number | null,
-    addressLng: null as number | null,
-    treatmentId: 0,
+    address: initialAddress || '',
+    addressLat: initialLat ?? null as number | null,
+    addressLng: initialLng ?? null as number | null,
+    treatmentId: initialTreatmentId || 0,
     scope: '',
     duration: '',
     price: '',

@@ -76,16 +76,88 @@ public static class SeedData
         }
     }
 
-    // ---- Technicy ----
+    // ---- Technicy (50 — cała Polska) ----
     private static void SeedTechnicians(AppDbContext db)
     {
         var technicians = new (string FullName, string Phone, double Lat, double Lng, string Specs)[]
         {
-            ("Tomasz Mazur", "+48 601 111 111", 52.2297, 21.0122, "drabina,osy,szerszenie"),
-            ("Ewa Kaczmarek", "+48 602 222 222", 52.2550, 20.9840, "osy"),
-            ("Piotr Wójcik", "+48 603 333 333", 52.1935, 21.0350, "drabina,szerszenie"),
-            ("Karolina Zielińska", "+48 604 444 444", 52.2680, 20.9530, "osy,szerszenie"),
-            ("Adam Nowakowski", "+48 605 555 555", 52.2150, 21.0460, "drabina"),
+            // Warszawa i okolice (10)
+            ("Tomasz Mazur",        "+48 601 111 111", 52.2297, 21.0122, "drabina,osy,szerszenie"),
+            ("Ewa Kaczmarek",       "+48 602 222 222", 52.2550, 20.9840, "osy"),
+            ("Piotr Wójcik",        "+48 603 333 333", 52.1935, 21.0350, "drabina,szerszenie"),
+            ("Karolina Zielińska",  "+48 604 444 444", 52.2680, 20.9530, "osy,szerszenie"),
+            ("Adam Nowakowski",     "+48 605 555 555", 52.2150, 21.0460, "drabina"),
+            ("Monika Pawlak",       "+48 606 111 001", 52.3100, 20.9600, "osy,drabina"),
+            ("Rafał Sikora",        "+48 606 111 002", 52.1600, 20.9300, "szerszenie"),
+            ("Natalia Kubiak",      "+48 606 111 003", 52.2850, 21.0700, "osy,szerszenie,drabina"),
+            ("Jakub Michalski",     "+48 606 111 004", 52.1800, 21.1200, "drabina"),
+            ("Agnieszka Kamińska",  "+48 606 111 005", 52.2400, 20.8800, "osy"),
+
+            // Kraków i okolice (6)
+            ("Bartosz Wiśniewski",  "+48 607 200 001", 50.0647, 19.9450, "drabina,osy,szerszenie"),
+            ("Aleksandra Dudek",    "+48 607 200 002", 50.0800, 19.9100, "osy,szerszenie"),
+            ("Marcin Wróbel",       "+48 607 200 003", 50.0400, 19.9600, "drabina"),
+            ("Paulina Stępień",     "+48 607 200 004", 50.0900, 20.0100, "osy"),
+            ("Damian Głowacki",     "+48 607 200 005", 50.0300, 19.8800, "szerszenie,drabina"),
+            ("Klaudia Jasińska",    "+48 607 200 006", 50.1100, 19.9700, "osy,drabina"),
+
+            // Wrocław (4)
+            ("Łukasz Borkowski",    "+48 608 300 001", 51.1079, 17.0385, "drabina,osy"),
+            ("Magdalena Szymczak",  "+48 608 300 002", 51.1200, 17.0600, "szerszenie,osy"),
+            ("Krzysztof Pietrzak",  "+48 608 300 003", 51.0900, 17.0100, "drabina,szerszenie"),
+            ("Ewelina Walczak",     "+48 608 300 004", 51.1350, 17.0800, "osy"),
+
+            // Poznań (4)
+            ("Michał Zawadzki",     "+48 609 400 001", 52.4064, 16.9252, "drabina,osy,szerszenie"),
+            ("Dominika Krawczyk",   "+48 609 400 002", 52.3900, 16.9500, "osy,szerszenie"),
+            ("Robert Czarnecki",    "+48 609 400 003", 52.4200, 16.8900, "drabina"),
+            ("Sylwia Jabłońska",    "+48 609 400 004", 52.4400, 16.9100, "osy,drabina"),
+
+            // Gdańsk / Trójmiasto (4)
+            ("Paweł Majewski",      "+48 610 500 001", 54.3520, 18.6466, "drabina,osy,szerszenie"),
+            ("Joanna Adamczyk",     "+48 610 500 002", 54.3700, 18.6200, "osy"),
+            ("Grzegorz Sadowski",   "+48 610 500 003", 54.4100, 18.5700, "szerszenie,drabina"),
+            ("Marta Bąk",           "+48 610 500 004", 54.3300, 18.6800, "osy,szerszenie"),
+
+            // Łódź (3)
+            ("Artur Kalinowski",    "+48 611 600 001", 51.7592, 19.4560, "drabina,osy"),
+            ("Katarzyna Urbaniak",  "+48 611 600 002", 51.7800, 19.4200, "szerszenie"),
+            ("Tomasz Piotrowski",   "+48 611 600 003", 51.7400, 19.4900, "osy,drabina,szerszenie"),
+
+            // Szczecin (3)
+            ("Wojciech Cieślak",    "+48 612 700 001", 53.4285, 14.5528, "drabina,osy"),
+            ("Beata Kołodziej",     "+48 612 700 002", 53.4400, 14.5300, "szerszenie,osy"),
+            ("Dariusz Szulc",       "+48 612 700 003", 53.4100, 14.5800, "drabina,szerszenie"),
+
+            // Lublin (3)
+            ("Kamil Rutkowski",     "+48 613 800 001", 51.2465, 22.5684, "drabina,osy,szerszenie"),
+            ("Anna Mazurek",        "+48 613 800 002", 51.2600, 22.5400, "osy"),
+            ("Marek Sobczak",       "+48 613 800 003", 51.2300, 22.5900, "drabina"),
+
+            // Katowice / Śląsk (3)
+            ("Szymon Wieczorek",    "+48 614 900 001", 50.2649, 19.0238, "drabina,osy,szerszenie"),
+            ("Izabela Tomczak",     "+48 614 900 002", 50.2800, 19.0500, "osy,szerszenie"),
+            ("Andrzej Kwiatkowski", "+48 614 900 003", 50.2500, 18.9900, "drabina"),
+
+            // Bydgoszcz (2)
+            ("Mateusz Jaworski",    "+48 615 010 001", 53.1235, 18.0084, "osy,drabina"),
+            ("Renata Olszewska",    "+48 615 010 002", 53.1400, 17.9800, "szerszenie"),
+
+            // Białystok (2)
+            ("Filip Malinowski",    "+48 616 020 001", 53.1325, 23.1688, "drabina,osy"),
+            ("Dorota Witkowska",    "+48 616 020 002", 53.1500, 23.1400, "szerszenie,osy"),
+
+            // Rzeszów (2)
+            ("Sebastian Górski",    "+48 617 030 001", 50.0412, 21.9991, "drabina,szerszenie"),
+            ("Patrycja Kowalczyk",  "+48 617 030 002", 50.0300, 22.0200, "osy,drabina"),
+
+            // Olsztyn (2)
+            ("Konrad Lis",          "+48 618 040 001", 53.7784, 20.4801, "osy,szerszenie"),
+            ("Justyna Wróblewska",  "+48 618 040 002", 53.7600, 20.5000, "drabina"),
+
+            // Kielce (2)
+            ("Dawid Zając",          "+48 619 050 001", 50.8661, 20.6286, "drabina,osy"),
+            ("Weronika Nowak",      "+48 619 050 002", 50.8800, 20.6500, "szerszenie,osy"),
         };
 
         foreach (var (fullName, phone, lat, lng, specs) in technicians)
@@ -114,34 +186,27 @@ public static class SeedData
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var technicians = db.Technicians.ToList();
 
-        // Każdy technik ma inny schemat pracy — do testów
-        // Tomasz: 7-15 pon-pt (wczesna zmiana)
-        // Ewa: 9-17 pon-czw (krótszy tydzień)
-        // Piotr: 6-14 pon-pt (najwcześniej)
-        // Karolina: 10-18 pon-pt (późna zmiana)
-        // Adam: 8-16 pon-sob (z sobotami)
-        var schedules = new (int startH, int endH, bool includeSaturday)[]
+        // 5 schematów zmianowych, technik dostaje schemat wg indeksu % 5
+        var schedules = new (int startH, int endH, bool includeSaturday, bool skipFriday)[]
         {
-            (7, 15, false),   // Tomasz
-            (9, 17, false),   // Ewa
-            (6, 14, false),   // Piotr
-            (10, 18, false),  // Karolina
-            (8, 16, true),    // Adam — pracuje też w soboty
+            (7, 15, false, false),  // wczesna zmiana pon-pt
+            (9, 17, false, true),   // standardowa pon-czw
+            (6, 14, false, false),  // najwcześniejsza pon-pt
+            (10, 18, false, false), // późna zmiana pon-pt
+            (8, 16, true, false),   // standardowa pon-sob
         };
 
-        for (int t = 0; t < technicians.Count && t < schedules.Length; t++)
+        for (int t = 0; t < technicians.Count; t++)
         {
             var tech = technicians[t];
-            var (startH, endH, includeSaturday) = schedules[t];
+            var (startH, endH, includeSaturday, skipFriday) = schedules[t % schedules.Length];
 
             for (int i = 0; i < 14; i++)
             {
                 var date = today.AddDays(i);
                 if (date.DayOfWeek == DayOfWeek.Sunday) continue;
                 if (date.DayOfWeek == DayOfWeek.Saturday && !includeSaturday) continue;
-
-                // Ewa nie pracuje w piątki
-                if (t == 1 && date.DayOfWeek == DayOfWeek.Friday) continue;
+                if (date.DayOfWeek == DayOfWeek.Friday && skipFriday) continue;
 
                 db.Availabilities.Add(new Availability
                 {
