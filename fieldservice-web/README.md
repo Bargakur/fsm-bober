@@ -7,7 +7,7 @@ panel sugestii, panel admina. TypeScript, Vite, własne style w `index.css` (bez
 
 ```
 fieldservice-web/
-├── package.json                React 18, Leaflet, Lucide React, FullCalendar (legacy)
+├── package.json                React 18, Leaflet, Lucide React
 ├── vite.config.ts              Dev server :3000, proxy /api → :5050
 ├── nginx.conf                  Konfiguracja SPA dla Railway (fallback do index.html)
 ├── Dockerfile                  Multi-stage: build z node, serwowanie z nginx
@@ -30,8 +30,7 @@ fieldservice-web/
         ├── PreFilterModal.tsx       Filtry przed otwarciem kalendarza
         ├── AdminPanel.tsx           CRUD techników (tylko admin/superadmin)
         ├── LoginScreen.tsx          Login + hasło → JWT
-        ├── Sidebar.tsx              Nawigacja boczna (admin item warunkowo)
-        └── Calendar.tsx             [legacy] FullCalendar — nieużywany
+        └── Sidebar.tsx              Nawigacja boczna (admin item warunkowo)
 ```
 
 ## Uruchomienie
@@ -73,9 +72,9 @@ Wylogowanie = `localStorage.clear()`.
 
 ## Najważniejsze decyzje UI
 
-- **Kalendarz to nie FullCalendar.** Mamy własny `ResourceCalendar` — kolumny per technik, jedna doba
-  06:00–20:00, drag-to-reschedule. FullCalendar został w deps (legacy `Calendar.tsx`), ale nie jest
-  importowany. Można usunąć przy następnym sprzątaniu zależności.
+- **Własny komponent kalendarza.** `ResourceCalendar` — kolumny per technik, jedna doba 06:00–20:00,
+  drag-to-reschedule. Nie używamy FullCalendar — kolumny per zasób z naszym layoutem były szybsze do
+  napisania od zera niż obejście FullCalendar API.
 - **Adres → współrzędne po stronie klienta** kiedy się da (Google Places). Backend ma fallback do
   Nominatim, ale frontend zwraca dokładniejsze koordynaty z autocomplete.
 - **Style w jednym `index.css`.** Zmienne CSS, BEM-light. Brak Tailwinda — projekt jest mały, nie warto

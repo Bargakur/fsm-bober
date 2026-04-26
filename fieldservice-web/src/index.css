@@ -90,46 +90,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 
 .calendar-container { flex: 1; padding: 0 28px 16px; overflow-y: auto; }
 
-/* ---- FullCalendar overrides ---- */
-.calendar-wrap {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  padding: 16px;
-  border: 1px solid var(--border);
-}
-
-.fc { font-family: var(--font) !important; }
-.fc .fc-toolbar-title { font-size: 17px !important; font-weight: 600 !important; }
-.fc .fc-button {
-  font-family: var(--font) !important;
-  font-size: 13px !important;
-  padding: 5px 12px !important;
-  border-radius: var(--radius) !important;
-}
-.fc .fc-button-primary {
-  background: var(--bg) !important;
-  border-color: var(--border) !important;
-  color: var(--text) !important;
-}
-.fc .fc-button-primary:hover { background: var(--bg-hover) !important; }
-.fc .fc-button-primary.fc-button-active {
-  background: var(--accent) !important;
-  border-color: var(--accent) !important;
-  color: #fff !important;
-}
-.fc .fc-event {
-  border-radius: 6px !important;
-  padding: 2px 6px !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  border: none !important;
-}
-.fc .fc-timegrid-slot { height: 36px !important; }
-.fc .fc-col-header-cell { font-size: 13px; font-weight: 500; }
-.fc td, .fc th { border-color: var(--border) !important; }
-
 /* ---- Filter bar ---- */
 .filter-bar {
   display: flex;
