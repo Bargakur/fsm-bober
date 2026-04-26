@@ -129,9 +129,12 @@ public class OrdersController : ControllerBase
 
     /// <summary>GET /api/orders/technician/3?date=2026-04-15</summary>
     [HttpGet("technician/{technicianId}")]
-    [AllowAnonymous] // technik loguje się w mobilnej appce, nie przez JWT
+    [Authorize(Roles = "technician,admin,superadmin")]
     public async Task<ActionResult> GetTechnicianOrders(int technicianId, [FromQuery] DateOnly date)
     {
+        if (!CanAccessTechnicianData(technicianId))
+            return Forbid();
+
         var orders = await _db.Orders
             .Include(o => o.Treatment)
             .Include(o => o.Protocol)
@@ -144,9 +147,12 @@ public class OrdersController : ControllerBase
 
     /// <summary>POST /api/orders/technician/3/location — GPS co 30s</summary>
     [HttpPost("technician/{technicianId}/location")]
-    [AllowAnonymous]
+    [Authorize(Roles = "technician,admin,superadmin")]
     public async Task<ActionResult> ReportLocation(int technicianId, [FromBody] LocationReportDto dto)
     {
+        if (!CanAccessTechnicianData(technicianId))
+            return Forbid();
+
         var activeOrder = await _db.Orders
             .Include(o => o.Protocol)
             .Where(o => o.TechnicianId == technicianId
@@ -182,7 +188,7 @@ public class OrdersController : ControllerBase
 
     /// <summary>PUT /api/orders/5/complete</summary>
     [HttpPut("{id}/complete")]
-    [AllowAnonymous]
+    [Authorize(Roles = "technician,admin,superadmin")]
     public async Task<ActionResult> CompleteOrder(int id, [FromBody] SubmitProtocolDto dto)
     {
         var order = await _db.Orders
@@ -190,6 +196,11 @@ public class OrdersController : ControllerBase
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null) return NotFound();
+
+        // Technik może zamknąć tylko własne zlecenie
+        var techId = GetCurrentTechnicianId();
+        if (techId.HasValue && order.TechnicianId != techId)
+            return Forbid();
 
         if (order.Protocol == null)
         {
@@ -218,5 +229,18 @@ public class OrdersController : ControllerBase
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return claim != null ? int.Parse(claim) : 1;
+    }
+
+    private int? GetCurrentTechnicianId()
+    {
+        var claim = User.FindFirstValue("technicianId");
+        return claim != null ? int.Parse(claim) : null;
+    }
+
+    /// <summary>Technician token may only access their own data; admins can access any.</summary>
+    private bool CanAccessTechnicianData(int technicianId)
+    {
+        var techId = GetCurrentTechnicianId();
+        return techId == null || techId == technicianId;
     }
 }

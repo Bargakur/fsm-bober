@@ -1,5 +1,6 @@
 # ============================================================
 # docker compose up — uruchamia cały system jednym poleceniem
+# Wymagane: skopiuj .env.example do .env i ustaw wartości
 # ============================================================
 
 services:
@@ -15,16 +16,17 @@ services:
       redis:
         condition: service_started
     environment:
-      - ConnectionStrings__Default=Host=postgres;Database=fieldservice;Username=postgres;Password=dev123
+      - ConnectionStrings__Default=Host=postgres;Database=fieldservice;Username=postgres;Password=${POSTGRES_PASSWORD}
       - ASPNETCORE_ENVIRONMENT=Development
-      - Jwt__Key=FsmBoberSuperSecretKey2026!@#$%^&*()
+      - Jwt__Key=${JWT_KEY}
+      - Cors__AllowedOrigins__0=${CORS_ALLOWED_ORIGIN:-http://localhost:5173}
 
   # --- Baza danych ---
   postgres:
-    image: postgis/postgis:16-3.4     # PostgreSQL + PostGIS (geolokalizacja)
+    image: postgis/postgis:16-3.4
     environment:
       POSTGRES_DB: fieldservice
-      POSTGRES_PASSWORD: dev123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -66,15 +68,15 @@ services:
   minio:
     image: minio/minio:latest
     ports:
-      - "9000:9000"       # API
-      - "9001:9001"       # Panel webowy MinIO
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     volumes:
       - miniodata:/data
 
 volumes:
-  pgdata:       # Dane PostgreSQL — przetrwają restart kontenera
-  miniodata:    # Zdjęcia protokołów
+  pgdata:
+  miniodata:
