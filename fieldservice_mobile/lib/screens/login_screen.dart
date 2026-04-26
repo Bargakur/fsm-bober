@@ -52,13 +52,82 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadTechnicians();
   }
 
-  void _selectTechnician(Technician tech) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => DayScreen(
-          technicianId: tech.id,
-          technicianName: tech.fullName,
+  Future<void> _selectTechnician(Technician tech) async {
+    final pin = await _showPinDialog(tech.fullName);
+    if (pin == null || pin.isEmpty) return;
+
+    setState(() => _loading = true);
+    try {
+      await ApiService.technicianLogin(tech.id, pin);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => DayScreen(
+            technicianId: tech.id,
+            technicianName: tech.fullName,
+          ),
         ),
+      );
+    } catch (e) {
+      setState(() => _loading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Nieprawidłowy PIN'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
+  Future<String?> _showPinDialog(String techName) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2E),
+        title: Text(
+          techName,
+          style: const TextStyle(color: Colors.white, fontSize: 17),
+        ),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          style: const TextStyle(color: Colors.white, fontSize: 22, letterSpacing: 8),
+          textAlign: TextAlign.center,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'PIN',
+            labelStyle: TextStyle(color: Colors.grey.shade500),
+            counterText: '',
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade700),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFC8712E)),
+            ),
+          ),
+          onSubmitted: (value) => Navigator.pop(ctx, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Anuluj', style: TextStyle(color: Colors.grey.shade400)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC8712E),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Zaloguj'),
+          ),
+        ],
       ),
     );
   }
@@ -73,7 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               const SizedBox(height: 60),
-              // Logo
               const Icon(Icons.engineering, color: Color(0xFFC8712E), size: 56),
               const SizedBox(height: 12),
               const Text(
@@ -110,7 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(color: Colors.grey.shade700),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
                     ),
                   ),
@@ -162,38 +231,36 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => _selectTechnician(tech),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 16),
                             child: Row(
                               children: [
                                 CircleAvatar(
                                   backgroundColor: const Color(0xFFC8712E),
                                   radius: 20,
                                   child: Text(
-                                    tech.fullName.split(' ').map((w) => w[0]).take(2).join(),
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                    tech.fullName
+                                        .split(' ')
+                                        .map((w) => w[0])
+                                        .take(2)
+                                        .join(),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ),
                                 const SizedBox(width: 14),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tech.fullName,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      tech.phone,
-                                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                                    ),
-                                  ],
+                                Text(
+                                  tech.fullName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                                 const Spacer(),
-                                Icon(Icons.chevron_right, color: Colors.grey.shade600),
+                                Icon(Icons.chevron_right,
+                                    color: Colors.grey.shade600),
                               ],
                             ),
                           ),

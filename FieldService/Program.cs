@@ -20,7 +20,6 @@ var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connectionString;
 if (!string.IsNullOrEmpty(databaseUrl))
 {
-    // Konwersja DATABASE_URL → Npgsql connection string
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':');
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
@@ -33,8 +32,11 @@ else
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "FsmBoberSuperSecretKey2026!@#$%^&*()";
+// JWT Authentication — key must be set via Jwt__Key env var or appsettings.json
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException("Jwt:Key is required. Set it via environment variable Jwt__Key.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -56,26 +58,25 @@ builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
-        // Obsługa DateOnly / TimeOnly w JSON
         o.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
         o.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
-        // Zapobiega cyklicznej serializacji (Treatment -> Orders -> Treatment -> ...)
         o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// CORS — origins configured via Cors__AllowedOrigins__0, __1 etc. in env or appsettings
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173"];
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+    p.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader()));
 
 var app = builder.Build();
 
-// Migracja bazy + seed data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
-    SeedData.Initialize(db);
 }
 
 app.UseCors();
@@ -85,64 +86,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Health check dla Railway
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-
-// Diagnostyka bazy — tymczasowy endpoint do debugowania
-app.MapGet("/debug/db", async (AppDbContext db) =>
-{
-    var result = new Dictionary<string, object>();
-
-    try
-    {
-        // 1. Sprawdź nazwy tabel
-        using var conn = db.Database.GetDbConnection();
-        await conn.OpenAsync();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name";
-        var tables = new List<string>();
-        using (var reader = await cmd.ExecuteReaderAsync())
-        {
-            while (await reader.ReadAsync())
-                tables.Add(reader.GetString(0));
-        }
-        result["tables"] = tables;
-
-        // 2. Sprawdź kolumny tabeli Technicians (jakakolwiek nazwa)
-        var techTable = tables.FirstOrDefault(t => t.Equals("Technicians", StringComparison.OrdinalIgnoreCase));
-        if (techTable != null)
-        {
-            cmd.CommandText = $"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{techTable}' ORDER BY ordinal_position";
-            var columns = new List<string>();
-            using (var reader = await cmd.ExecuteReaderAsync())
-            {
-                while (await reader.ReadAsync())
-                    columns.Add($"{reader.GetString(0)} ({reader.GetString(1)})");
-            }
-            result["technicians_table_name"] = techTable;
-            result["technicians_columns"] = columns;
-        }
-        else
-        {
-            result["technicians_table_name"] = "NOT FOUND";
-        }
-
-        // 3. Ile techników w bazie
-        cmd.CommandText = techTable != null
-            ? $"SELECT COUNT(*) FROM \"{techTable}\""
-            : "SELECT 0";
-        result["technicians_count"] = (await cmd.ExecuteScalarAsync())?.ToString() ?? "0";
-
-        conn.Close();
-    }
-    catch (Exception ex)
-    {
-        result["error"] = ex.Message;
-    }
-
-    return Results.Ok(result);
-});
 
 app.Run();
 

@@ -28,7 +28,10 @@ public class Technician
     public string Specializations { get; set; } = string.Empty;
     
     public bool IsActive { get; set; } = true;
-    
+
+    /// <summary>PBKDF2 hash PINu do logowania w aplikacji mobilnej (format: base64(salt):base64(hash))</summary>
+    public string PinHash { get; set; } = string.Empty;
+
     // Nawigacja
     public List<Availability> Availabilities { get; set; } = new();
     public List<Order> Orders { get; set; } = new();

@@ -23,15 +23,23 @@ public class TechniciansController : ControllerBase
 
     /// <summary>GET /api/technicians</summary>
     [HttpGet]
-    [AllowAnonymous] // potrzebne dla mobilnej appki (lista techników do loginu)
+    [AllowAnonymous]
     public async Task<ActionResult> GetAll([FromQuery] bool includeInactive = false)
     {
-        var query = _db.Technicians.AsQueryable();
-        if (!includeInactive)
-            query = query.Where(t => t.IsActive);
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            var query = _db.Technicians.AsQueryable();
+            if (!includeInactive)
+                query = query.Where(t => t.IsActive);
+            return Ok(await query.OrderBy(t => t.FullName).ToListAsync());
+        }
 
-        var technicians = await query.OrderBy(t => t.FullName).ToListAsync();
-        return Ok(technicians);
+        // Niezalogowani (ekran logowania mobilnej appki) — tylko id i imię, bez danych kontaktowych
+        return Ok(await _db.Technicians
+            .Where(t => t.IsActive)
+            .OrderBy(t => t.FullName)
+            .Select(t => new { t.Id, t.FullName })
+            .ToListAsync());
     }
 
     /// <summary>GET /api/technicians/3</summary>
