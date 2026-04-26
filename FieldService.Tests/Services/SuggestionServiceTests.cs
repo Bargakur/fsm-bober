@@ -214,48 +214,125 @@ public class SuggestionServiceTests
     }
 
     [Fact]
-    public async Task GetSuggestions_DistanceCalculatedFromLastOrder_NotHome()
+    public async Task GetSuggestions_DistanceFromEarlierOrder_BeatsFarHome()
     {
         await using var db = NewDb();
-        // Dom technika daleko (Kraków)
-        var tech = MakeTech(1, "T", 50.0647, 19.9450);
+        var tech = MakeTech(1, "T", 50.0647, 19.9450);  // dom: Kraków
         db.Technicians.Add(tech);
+        SeedFixtures(db);
 
-        var treatment = new Treatment { Id = 1, Name = "Test", DurationMinutes = 60, DefaultPrice = 100 };
-        db.Treatments.Add(treatment);
-
-        var user = new User { Id = 1, Login = "u", Email = "", PasswordHash = "", Role = "admin", FullName = "U", IsActive = true };
-        db.Users.Add(user);
-
-        // Wcześniejsze zlecenie dziś o 8:00–9:00 w Warszawie — kończy się przed nowym slotem
-        db.Orders.Add(new Order
-        {
-            Id = 100,
-            CustomerName = "Wcześniejszy",
-            CustomerPhone = "",
-            Address = "WWA",
-            Lat = 52.2300,
-            Lng = 21.0125,
-            TreatmentId = 1,
-            CreatedByUserId = 1,
-            TechnicianId = 1,
-            ScheduledDate = new DateOnly(2026, 5, 1),
-            ScheduledStart = new TimeOnly(8, 0),
-            ScheduledEnd = new TimeOnly(9, 0),
-            Status = "scheduled",
-            Price = 100,
-        });
+        // Wcześniejsze zlecenie dziś — w Warszawie
+        db.Orders.Add(MakeOrder(100, technicianId: 1, lat: 52.2300, lng: 21.0125,
+            start: new TimeOnly(8, 0), end: new TimeOnly(9, 0)));
         await db.SaveChangesAsync();
 
         var sut = new SuggestionService(db);
-        // Nowy slot 10:00–12:00 — odległość liczona od ostatniego zlecenia (Warszawa), nie domu (Kraków)
         var result = await sut.GetSuggestionsAsync(
             WarsawLat, WarsawLng, new DateOnly(2026, 5, 1),
             new TimeOnly(10, 0), new TimeOnly(12, 0), null);
 
         Assert.Single(result);
-        // ~1 km, nie ~250 km
         Assert.True(result[0].DistanceKm < 5,
-            $"Spodziewałem się odległości od poprzedniego zlecenia (~1 km), dostałem {result[0].DistanceKm} km");
+            $"Min{{Kraków→WWA, WWA→WWA}} ≈ 1 km, dostałem {result[0].DistanceKm}");
+        Assert.Equal("order", result[0].DistanceSource);
     }
+
+    [Fact]
+    public async Task GetSuggestions_DistanceFromLaterOrder_AlsoCounts()
+    {
+        // Klucz: technik z domem w Krakowie, ale z zaplanowanym zleceniem w Warszawie LATER tego dnia,
+        // powinien być sugerowany jako bliski klientowi w Warszawie — bo i tak będzie w okolicy.
+        await using var db = NewDb();
+        db.Technicians.Add(MakeTech(1, "T", 50.0647, 19.9450));  // dom: Kraków
+        SeedFixtures(db);
+
+        // Zlecenie LATER dziś — w Warszawie (16:00–17:00)
+        db.Orders.Add(MakeOrder(100, technicianId: 1, lat: 52.2300, lng: 21.0125,
+            start: new TimeOnly(16, 0), end: new TimeOnly(17, 0)));
+        await db.SaveChangesAsync();
+
+        var sut = new SuggestionService(db);
+        // Nowy slot 10:00 — przed istniejącym zleceniem
+        var result = await sut.GetSuggestionsAsync(
+            WarsawLat, WarsawLng, new DateOnly(2026, 5, 1),
+            new TimeOnly(10, 0), new TimeOnly(12, 0), null);
+
+        Assert.Single(result);
+        Assert.True(result[0].DistanceKm < 5,
+            $"Późniejsze zlecenie też się liczy — oczekiwałem ~1 km, dostałem {result[0].DistanceKm}");
+        Assert.Equal("order", result[0].DistanceSource);
+    }
+
+    [Fact]
+    public async Task GetSuggestions_PicksMinimumAcrossMultipleOrders()
+    {
+        await using var db = NewDb();
+        db.Technicians.Add(MakeTech(1, "T", 50.0647, 19.9450));  // dom: Kraków (~250 km)
+        SeedFixtures(db);
+
+        // 3 zlecenia w różnych odległościach od klienta (centrum Warszawy)
+        db.Orders.Add(MakeOrder(100, 1, lat: 52.4000, lng: 21.0122,   // ~19 km na północ
+            start: new TimeOnly(8, 0), end: new TimeOnly(9, 0)));
+        db.Orders.Add(MakeOrder(101, 1, lat: 52.2400, lng: 21.0200,   // ~1.5 km
+            start: new TimeOnly(13, 0), end: new TimeOnly(14, 0)));
+        db.Orders.Add(MakeOrder(102, 1, lat: 52.3000, lng: 21.0500,   // ~9 km
+            start: new TimeOnly(16, 0), end: new TimeOnly(17, 0)));
+        await db.SaveChangesAsync();
+
+        var sut = new SuggestionService(db);
+        var result = await sut.GetSuggestionsAsync(
+            WarsawLat, WarsawLng, new DateOnly(2026, 5, 1),
+            new TimeOnly(10, 0), new TimeOnly(12, 0), null);
+
+        Assert.Single(result);
+        // Powinien wybrać najbliższe zlecenie (101: ~1.5 km), nie domu (~250 km)
+        Assert.True(result[0].DistanceKm < 3,
+            $"Min{{Kraków, 19km, 1.5km, 9km}} ≈ 1.5 km, dostałem {result[0].DistanceKm}");
+        Assert.Equal("order", result[0].DistanceSource);
+    }
+
+    [Fact]
+    public async Task GetSuggestions_NoOrders_DistanceFromHome()
+    {
+        await using var db = NewDb();
+        // Dom blisko klienta (1 km od centrum WWA)
+        db.Technicians.Add(MakeTech(1, "T", 52.2387, 21.0122));
+        await db.SaveChangesAsync();
+
+        var sut = new SuggestionService(db);
+        var result = await sut.GetSuggestionsAsync(
+            WarsawLat, WarsawLng, new DateOnly(2026, 5, 1),
+            new TimeOnly(10, 0), new TimeOnly(12, 0), null);
+
+        Assert.Single(result);
+        Assert.Equal("home", result[0].DistanceSource);
+        Assert.True(result[0].DistanceKm < 2);
+    }
+
+    // ---- Fixtures helpers ----
+
+    private static void SeedFixtures(AppDbContext db)
+    {
+        db.Treatments.Add(new Treatment { Id = 1, Name = "Test", DurationMinutes = 60, DefaultPrice = 100 });
+        db.Users.Add(new User { Id = 1, Login = "u", Email = "", PasswordHash = "", Role = "admin", FullName = "U", IsActive = true });
+    }
+
+    private static Order MakeOrder(int id, int technicianId, double lat, double lng, TimeOnly start, TimeOnly end)
+        => new()
+        {
+            Id = id,
+            CustomerName = $"Klient #{id}",
+            CustomerPhone = "",
+            Address = "addr",
+            Lat = lat,
+            Lng = lng,
+            TreatmentId = 1,
+            CreatedByUserId = 1,
+            TechnicianId = technicianId,
+            ScheduledDate = new DateOnly(2026, 5, 1),
+            ScheduledStart = start,
+            ScheduledEnd = end,
+            Status = "scheduled",
+            Price = 100,
+        };
 }

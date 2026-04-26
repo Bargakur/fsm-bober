@@ -52,21 +52,26 @@ public class SuggestionService : ISuggestionService
                 if (endTime > availability.EndTime) fitLevel = "warning";     // po zmianie
             }
 
-            // Oblicz odległość (z domu lub ostatniego zlecenia)
-            double fromLat = tech.HomeLat, fromLng = tech.HomeLng;
+            // Odległość = minimum z dystansów do {dom technika} ∪ {każde zlecenie tego dnia}.
+            // Założenie: jeśli technik ma już zlecenie w okolicy klienta (kiedykolwiek tego dnia),
+            // jest dobrym kandydatem — routing dnia można dograć tak, żeby zgrupować pobliskie punkty.
+            var homeDistanceM = GeoUtils.DistanceInMeters(
+                tech.HomeLat, tech.HomeLng, clientLat, clientLng);
 
-            var lastOrder = tech.Orders
-                .Where(o => o.ScheduledEnd <= startTime)
-                .OrderByDescending(o => o.ScheduledEnd)
-                .FirstOrDefault();
+            double minDistanceM = homeDistanceM;
+            string distanceSource = "home";
 
-            if (lastOrder != null)
+            foreach (var order in tech.Orders)
             {
-                fromLat = lastOrder.Lat;
-                fromLng = lastOrder.Lng;
+                var d = GeoUtils.DistanceInMeters(order.Lat, order.Lng, clientLat, clientLng);
+                if (d < minDistanceM)
+                {
+                    minDistanceM = d;
+                    distanceSource = "order";
+                }
             }
 
-            var distanceKm = GeoUtils.DistanceInMeters(fromLat, fromLng, clientLat, clientLng) / 1000.0;
+            var distanceKm = minDistanceM / 1000.0;
             var estimatedMinutes = (int)(distanceKm / 40.0 * 60.0);
 
             suggestions.Add(new TechnicianSuggestion
@@ -79,6 +84,7 @@ public class SuggestionService : ISuggestionService
                 AvailableTo = availability?.EndTime,
                 OrdersToday = tech.Orders.Count,
                 FitLevel = fitLevel,
+                DistanceSource = distanceSource,
             });
         }
 

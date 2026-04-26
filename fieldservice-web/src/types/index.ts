@@ -44,12 +44,15 @@ export interface Order {
 export interface TechnicianSuggestion {
   technicianId: number;
   fullName: string;
+  /** Najmniejsza odległość spośród punktów technika tego dnia (dom + każde zlecenie). */
   distanceKm: number;
   estimatedMinutes: number;
   availableFrom?: string;
   availableTo?: string;
   ordersToday: number;
   fitLevel: 'recommended' | 'available' | 'warning';
+  /** "home" gdy najbliżej jest dom; "order" gdy któreś z zaplanowanych zleceń. */
+  distanceSource: 'home' | 'order';
 }
 
 export interface CreateOrderDto {

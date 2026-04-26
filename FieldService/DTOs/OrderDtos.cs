@@ -44,12 +44,21 @@ public class TechnicianSuggestion
 {
     public int TechnicianId { get; set; }
     public string FullName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Minimalna odległość spośród punktów technika tego dnia
+    /// (dom + każde zlecenie). Reprezentuje "najlepszy przypadek" routingu.
+    /// </summary>
     public double DistanceKm { get; set; }
+
     public int EstimatedMinutes { get; set; }
     public TimeOnly? AvailableFrom { get; set; }
     public TimeOnly? AvailableTo { get; set; }
     public int OrdersToday { get; set; }
     public string FitLevel { get; set; } = "available";
+
+    /// <summary>"home" gdy najbliższy punkt to dom technika; "order" gdy to któreś z zleceń tego dnia.</summary>
+    public string DistanceSource { get; set; } = "home";
 }
 
 public class SubmitProtocolDto

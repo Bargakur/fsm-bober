@@ -58,9 +58,16 @@ export default function SuggestionPanel({ order, suggestions, onAssigned, onClos
                   <span>{s.fullName}</span>
                 </div>
                 <div className="suggestion-details">
-                  <span className="detail">
+                  <span className="detail" title={
+                    s.distanceSource === 'order'
+                      ? 'Odległość liczona od najbliższego zlecenia tego dnia'
+                      : 'Odległość liczona od domu technika'
+                  }>
                     <MapPin size={14} />
                     {s.distanceKm} km
+                    {s.distanceSource === 'order' && (
+                      <span className="detail-hint"> · od zlecenia</span>
+                    )}
                   </span>
                   <span className="detail">
                     <Clock size={14} />
