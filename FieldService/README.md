@@ -1,75 +1,177 @@
-# FieldService — System zarządzania zabiegami w terenie
+# FieldService — Backend
 
-## Struktura projektu
+REST API systemu FSM Bober. .NET 8, ASP.NET Core, Entity Framework Core 8, PostgreSQL/PostGIS.
+
+Dla architektury domenowej i decyzji projektowych zobacz [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md).
+Dla deployu i runbooka — [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md).
+
+## Layout
 
 ```
 FieldService/
-├── Models/                    # Modele danych (tabele w bazie)
-│   ├── User.cs                # Handlowcy i administratorzy
-│   ├── Technician.cs          # Technicy (z współrzędnymi domu)
-│   ├── Availability.cs        # Grafik dostępności techników
-│   ├── Client.cs              # Klienci (z współrzędnymi adresu)
-│   ├── Treatment.cs           # Formatki zabiegów (czas, cena, skill)
-│   ├── Order.cs               # Zlecenia (centralna tabela)
-│   ├── Protocol.cs            # Protokoły (GPS arrival, zdjęcie, uwagi)
-│   └── Payment.cs             # Płatności
-│
-├── Data/
-│   └── AppDbContext.cs        # Entity Framework — mapuje modele na tabele
-│
-├── DTOs/
-│   └── OrderDtos.cs           # Obiekty transferu danych (walidacja wejścia)
+├── Program.cs                      Startup, DI, JWT, CORS, migracje (Database.Migrate + baseline)
+├── appsettings.json                Domyślny connection string (lokalny, dla dev)
+├── docker-compose.yml              Postgres + MinIO + API (lokalnie)
+├── Dockerfile                      Multi-stage build dla Railway
 │
 ├── Controllers/
-│   └── OrdersController.cs    # Endpointy API (CRUD + sugestie + GPS)
+│   ├── AuthController.cs           POST /api/auth/login, /technician-login, GET /me
+│   ├── OrdersController.cs         CRUD zleceń, GPS auto-arrival, complete
+│   ├── TechniciansController.cs    Lista publiczna + admin CRUD + dostępność
+│   └── TreatmentsController.cs     Słownik zabiegów (dropdown)
 │
 ├── Services/
-│   └── SuggestionService.cs   # Algorytm rankingu techników
+│   ├── SuggestionService.cs        Ranking techników (odległość + dostępność + skill)
+│   └── GeocodingService.cs         Nominatim → lat/lng dla adresu
 │
-├── Program.cs                 # Punkt wejścia — konfiguracja serwisów
-├── appsettings.json           # Connection string do PostgreSQL
-├── Dockerfile                 # Budowanie obrazu API
-└── docker-compose.yml         # Cały system — jedno polecenie
+├── Data/
+│   ├── AppDbContext.cs             EF Core mapowanie, indeksy, FK
+│   └── AppDbContextDesignTimeFactory.cs   Factory dla `dotnet ef` (bez startupu aplikacji)
+│
+├── Models/                         Encje domenowe (User, Technician, Treatment, Order, …)
+├── DTOs/                           Walidacja wejścia + kształt odpowiedzi
+├── Migrations/                     EF Core migracje (InitialCreate + kolejne)
+└── Utils/GeoUtils.cs               Haversine
 ```
 
-## Uruchomienie (wymagany Docker)
+## Uruchomienie lokalne
 
 ```bash
+# Z głównego katalogu repo skopiuj plik .env
+cp ../.env.example .env
+$EDITOR .env
+
 docker compose up --build
 ```
 
 Po starcie:
-- API:          http://localhost:5000
-- Swagger docs: http://localhost:5000/swagger
-- MinIO panel:  http://localhost:9001 (minioadmin / minioadmin123)
 
-## Kluczowe endpointy
+| Usługa     | URL                                |
+| ---------- | ---------------------------------- |
+| API        | http://localhost:5050              |
+| Swagger    | http://localhost:5050/swagger      |
+| Health     | http://localhost:5050/health       |
+| Postgres   | localhost:5432 (user: `postgres`)  |
+| MinIO      | http://localhost:9001              |
 
-| Metoda | Ścieżka                              | Opis                                    |
-|--------|---------------------------------------|------------------------------------------|
-| GET    | /api/orders?date=2026-04-15           | Zlecenia na dany dzień (kalendarz)       |
-| POST   | /api/orders                           | Utwórz zlecenie + pobierz sugestie       |
-| PUT    | /api/orders/{id}/assign               | Przypisz technika (handlowiec wybiera)   |
-| GET    | /api/orders/technician/{id}?date=...  | Zlecenia technika na dzień (apka)        |
-| POST   | /api/orders/technician/{id}/location  | Raport GPS (automatyczny, co 30s)        |
-| PUT    | /api/orders/{id}/complete             | Zakończ zabieg (technik w apce)          |
+## Konfiguracja
 
-## Co jest gotowe, co trzeba dobudować
+Wszystko przez zmienne środowiskowe (kompozycja: `Section__Key`). Brak pliku konfiguracyjnego z sekretami w
+repo — lokalnie używamy `.env` (gitignored).
 
-### Gotowe w tym szkielecie:
-- [x] Model danych z relacjami i indeksami
-- [x] CRUD zleceń z walidacją
-- [x] Algorytm sugestii techników (Haversine — linia prosta)
-- [x] Automatyczne wykrywanie przyjazdu technika (GPS)
-- [x] Zakończenie zabiegu z protokołem
-- [x] Docker Compose z PostgreSQL, Redis, MinIO
-- [x] Swagger — automatyczna dokumentacja API
+| Zmienna                       | Wymagane | Opis                                                                |
+| ----------------------------- | -------- | ------------------------------------------------------------------- |
+| `Jwt__Key`                    | tak      | Klucz HMAC do JWT, min. 32 znaki. Brak = aplikacja nie wystartuje.  |
+| `ConnectionStrings__Default`  | tak\*    | Postgres connection string (lokalnie / generic).                    |
+| `DATABASE_URL`                | tak\*    | Format Railway/Heroku (`postgresql://user:pass@host/db`).           |
+| `Cors__AllowedOrigins__0..N`  | nie      | Białą listę originów. Domyślnie `http://localhost:5173`.            |
+| `PORT`                        | nie      | Override portu (Railway ustawia automatycznie).                     |
 
-### Do dobudowania:
-- [ ] Autoryzacja JWT (logowanie handlowców i techników)
-- [ ] Upload zdjęć do MinIO
-- [ ] Integracja VROOM + OSRM (realne trasy drogowe)
-- [ ] Panel webowy React z FullCalendar.js
-- [ ] Aplikacja mobilna Flutter
-- [ ] Push notifications (Firebase)
-- [ ] Dashboard KPI (spóźnienia, czasy zabiegów)
+\* `DATABASE_URL` ma priorytet nad `ConnectionStrings__Default`. Dokładnie jeden musi być ustawiony.
+
+## Migracje
+
+Schema zarządzana przez EF Core Migrations. Przy starcie:
+
+1. Świeża baza → `Database.Migrate()` aplikuje wszystkie migracje od zera.
+2. Legacy baza (utworzona przez `EnsureCreated()`, bez `__EFMigrationsHistory`) → kod w `Program.cs`
+   robi *baseline*: dosypuje brakujące kolumny (idempotentne `ALTER TABLE … IF NOT EXISTS`),
+   tworzy `__EFMigrationsHistory` i markuje wszystkie istniejące migracje jako zaaplikowane.
+3. Baza zarządzana migracjami → `Database.Migrate()` aplikuje pending.
+
+Tworzenie nowej migracji:
+
+```bash
+DOTNET_ROLL_FORWARD=Major dotnet ef migrations add <NazwaZmiany> --project FieldService
+```
+
+Zmień model → wygeneruj migrację → commit obu plików (`Migrations/<timestamp>_*.cs` +
+`AppDbContextModelSnapshot.cs`). Push deployuje się sam, baza migruje przy starcie kontenera.
+
+`AppDbContextDesignTimeFactory` pozwala uruchomić `dotnet ef` bez podnoszenia całej aplikacji
+(nie wymaga `Jwt__Key` ani połączenia z bazą).
+
+## Endpointy
+
+Wszystkie pod prefiksem `/api/`. Auth via `Authorization: Bearer <jwt>` o ile nie zaznaczono inaczej.
+
+### Auth
+
+| Metoda | Ścieżka                         | Auth          | Opis                                          |
+| ------ | ------------------------------- | ------------- | --------------------------------------------- |
+| POST   | `/api/auth/login`               | anonim        | Login + hasło → JWT (12 h, claim z rolą).     |
+| POST   | `/api/auth/technician-login`    | anonim        | TechnicianId + PIN → JWT technika (24 h).     |
+| GET    | `/api/auth/me`                  | bearer        | Bieżący użytkownik z claimów tokena.          |
+
+Brute-force protection: 5 prób / minutę / IP, 5 prób na konto → lock 15 min. Patrz
+[`docs/SECURITY.md`](../docs/SECURITY.md).
+
+### Orders
+
+| Metoda | Ścieżka                                      | Rola                            | Opis                                                  |
+| ------ | -------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| GET    | `/api/orders?date=YYYY-MM-DD`                | dowolny zalogowany              | Zlecenia z danego dnia (kalendarz).                   |
+| POST   | `/api/orders`                                | dowolny zalogowany              | Tworzy zlecenie + zwraca sugestie techników.          |
+| PUT    | `/api/orders/{id}/assign`                    | dowolny zalogowany              | Przypisuje technika do zlecenia.                      |
+| GET    | `/api/orders/technician/{id}?date=…`         | technician (own) / admin        | Zlecenia technika na dzień.                           |
+| POST   | `/api/orders/technician/{id}/location`       | technician (own) / admin        | Raport GPS. Auto-arrival gdy <100 m od adresu.        |
+| PUT    | `/api/orders/{id}/complete`                  | technician (own) / admin        | Zamknięcie zlecenia + protokół + Payment.             |
+
+`POST /api/orders` — geocoding fallback: jeśli front nie poda `Lat/Lng`, backend pyta Nominatim.
+Przy braku wyniku spada do *Warszawa centrum* (52.2297, 21.0122) — to celowo, żeby zlecenie nie
+przepadło, ale handlowiec powinien poprawić adres.
+
+### Technicians
+
+| Metoda | Ścieżka                                       | Rola                | Opis                                                |
+| ------ | --------------------------------------------- | ------------------- | --------------------------------------------------- |
+| GET    | `/api/technicians`                            | publiczne (bez tel) | Lista aktywnych. Niezalogowany dostaje tylko id+name (na ekran logowania mobile). |
+| GET    | `/api/technicians?includeInactive=true`       | bearer              | Wszyscy, z dezaktywowanymi.                         |
+| GET    | `/api/technicians/{id}`                       | bearer              | Szczegóły.                                          |
+| GET    | `/api/technicians/{id}/availability?date=…`   | bearer              | Dostępność na konkretny dzień.                      |
+| GET    | `/api/technicians/availability/bulk?date=…`   | bearer              | Dostępność wszystkich techników na dzień (kalendarz).|
+| POST   | `/api/technicians`                            | admin/superadmin    | Dodaje technika + 14 dni domyślnej dostępności.     |
+| PUT    | `/api/technicians/{id}`                       | admin/superadmin    | Edycja (partial — `null` = bez zmian).              |
+| DELETE | `/api/technicians/{id}`                       | admin/superadmin    | Soft delete (`IsActive = false`).                   |
+
+### Treatments
+
+| Metoda | Ścieżka                  | Auth   | Opis                          |
+| ------ | ------------------------ | ------ | ----------------------------- |
+| GET    | `/api/treatments`        | bearer | Słownik aktywnych zabiegów.   |
+| GET    | `/api/treatments/{id}`   | bearer | Szczegóły zabiegu.            |
+
+### Pozostałe
+
+| Metoda | Ścieżka       | Opis                              |
+| ------ | ------------- | --------------------------------- |
+| GET    | `/health`     | Liveness probe (zwraca 200 zawsze). |
+
+## Testy
+
+```bash
+dotnet test                                  # ze ścieżki głównej repo
+DOTNET_ROLL_FORWARD=Major dotnet test        # gdy nie masz lokalnie .NET 8 runtime
+```
+
+27 testów, ~500 ms, bez wymagań runtime'owych poza .NET. EF Core InMemory zastępuje Postgresa
+(dla testów logiki — nie dla testowania samych migracji).
+
+## Algorytm sugestii (skrót)
+
+`SuggestionService.GetSuggestionsAsync(clientLat, clientLng, date, start, end, requiredSkill)`:
+
+1. Pobierz aktywnych techników z dostępnością i zleceniami z danego dnia.
+2. Filtruj po `requiredSkill` (substring w `Specializations`, comma-separated).
+3. Punkt startowy odległości:
+   - jeśli technik ma wcześniejsze zlecenie tego dnia (`ScheduledEnd <= start`) → adres tamtego zlecenia,
+   - inaczej → współrzędne domu (`HomeLat`/`HomeLng`).
+4. `DistanceKm = Haversine(start, klient) / 1000`.
+5. `EstimatedMinutes = DistanceKm / 40 * 60` (założenie: 40 km/h średnio w mieście).
+6. `FitLevel`:
+   - `warning` — brak `Availability` lub slot wykracza poza zmianę,
+   - `available` — dostępny.
+7. Sortuj: `available` przed `warning`, potem rosnąco po odległości.
+8. Pierwszy z listy (jeśli `available`) dostaje promocję `recommended`.
+
+Testy: `FieldService.Tests/Services/SuggestionServiceTests.cs`.
