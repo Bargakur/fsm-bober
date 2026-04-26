@@ -297,6 +297,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
   font-size: 12px;
   color: var(--text-muted);
 }
+.detail-hint {
+  font-size: 11px;
+  opacity: 0.75;
+  font-style: italic;
+}
 
 .icon-success { color: var(--success); }
 .icon-warning { color: var(--warning); }

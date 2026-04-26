@@ -108,16 +108,16 @@ Wyjście: lista techników z `DistanceKm`, `EstimatedMinutes`, `FitLevel`, posor
 
 1. Pobierz aktywnych techników wraz z `Availabilities` na `date` i `Orders` z `date`.
 2. Filtr: `requiredSkill in Specializations` (substring, comma-separated).
-3. Punkt startu odległości:
-   - jeśli technik ma już zlecenie kończące się przed `startTime` → adres tamtego zlecenia,
-   - inaczej → dom technika.
-4. `DistanceKm = Haversine(start, klient) / 1000`.
-5. `EstimatedMinutes = DistanceKm / 40 km/h × 60` (heurystyka miejska).
-6. `FitLevel`:
+3. `DistanceKm = min(Haversine(p, klient)) / 1000` po zbiorze punktów `{dom technika} ∪ {każde zlecenie tego dnia}`.
+   `DistanceSource = "home"` lub `"order"` — który punkt wygrał (UI pokazuje adnotację „od zlecenia").
+   Założenie: jeśli technik jest gdzieś w okolicy klienta tego dnia (niezależnie od pory),
+   da się ułożyć trasę, by zgrupować pobliskie punkty.
+4. `EstimatedMinutes = DistanceKm / 40 km/h × 60` (heurystyka miejska).
+5. `FitLevel`:
    - `warning` — brak `Availability` na ten dzień, lub `[startTime, endTime]` wykracza poza zmianę.
    - `available` — pasuje.
-7. Sort: `available` przed `warning`, dalej rosnąco po `DistanceKm`.
-8. Pierwszy `available` z listy dostaje promocję `recommended` (UI-hint, nie zmienia logiki).
+6. Sort: `available` przed `warning`, dalej rosnąco po `DistanceKm`.
+7. Pierwszy `available` z listy dostaje promocję `recommended` (UI-hint, nie zmienia logiki).
 
 Implementacja: `FieldService/Services/SuggestionService.cs`. Testy: `FieldService.Tests/Services/SuggestionServiceTests.cs`.
 

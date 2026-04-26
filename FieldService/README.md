@@ -163,15 +163,17 @@ DOTNET_ROLL_FORWARD=Major dotnet test        # gdy nie masz lokalnie .NET 8 runt
 
 1. Pobierz aktywnych techników z dostępnością i zleceniami z danego dnia.
 2. Filtruj po `requiredSkill` (substring w `Specializations`, comma-separated).
-3. Punkt startowy odległości:
-   - jeśli technik ma wcześniejsze zlecenie tego dnia (`ScheduledEnd <= start`) → adres tamtego zlecenia,
-   - inaczej → współrzędne domu (`HomeLat`/`HomeLng`).
-4. `DistanceKm = Haversine(start, klient) / 1000`.
-5. `EstimatedMinutes = DistanceKm / 40 * 60` (założenie: 40 km/h średnio w mieście).
-6. `FitLevel`:
+3. `DistanceKm = min(Haversine(p, klient)) / 1000` po zbiorze punktów
+   `{dom technika} ∪ {każde zlecenie z `ScheduledDate == date`}`.
+   Pole `DistanceSource` (`"home"`/`"order"`) mówi, który punkt wygrał — UI pokazuje to
+   handlowcowi (np. „4.2 km · od zlecenia").
+   Intuicja: jeśli technik jest gdzieś w okolicy klienta tego dnia (niezależnie od pory),
+   warto zgrupować pobliskie punkty w trasie — to lepszy sygnał niż sam dom.
+4. `EstimatedMinutes = DistanceKm / 40 * 60` (założenie: 40 km/h średnio w mieście).
+5. `FitLevel`:
    - `warning` — brak `Availability` lub slot wykracza poza zmianę,
    - `available` — dostępny.
-7. Sortuj: `available` przed `warning`, potem rosnąco po odległości.
-8. Pierwszy z listy (jeśli `available`) dostaje promocję `recommended`.
+6. Sortuj: `available` przed `warning`, potem rosnąco po odległości.
+7. Pierwszy z listy (jeśli `available`) dostaje promocję `recommended`.
 
 Testy: `FieldService.Tests/Services/SuggestionServiceTests.cs`.
