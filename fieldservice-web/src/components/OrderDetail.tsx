@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, MapPin, Clock, User, CreditCard, FileText, Phone, ClipboardList, Trash2 } from 'lucide-react';
 import type { Order } from '../types';
 import { deleteOrder } from '../services/api';
@@ -28,6 +28,30 @@ export default function OrderDetail({ order, onClose, onAssign, onDeleted }: Pro
   // Backend blokuje completed (409). UI powinno też ukryć przycisk, żeby user nie próbował
   // i nie widział czerwonego banera "Conflict". Anulowanie idzie osobnym flow (nie tutaj).
   const canDelete = order.status !== 'completed';
+
+  // Skrót klawiaturowy: Delete / Backspace otwiera confirm (równowartość kliku w "Usuń").
+  // Dlaczego window-level: modal i tak overlay-uje całą stronę, a nie chcemy walczyć
+  // z fokusem (po otwarciu OrderDetail nic konkretnego nie ma fokusa).
+  // Pomijamy gdy:
+  //   - confirm już otwarty → niech ConfirmDialog sam obsługuje swoje klawisze (Esc).
+  //   - canDelete=false → nie ma czego potwierdzać.
+  //   - fokus jest w polu tekstowym → user pisze, nie chce kasować zlecenia.
+  //   - klawisz miał modyfikator (Cmd/Ctrl/Alt/Meta) → np. Cmd+Delete to skrót systemowy.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (confirmOpen || !canDelete) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      setConfirmOpen(true);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [confirmOpen, canDelete]);
 
   const handleConfirmDelete = async () => {
     setDeleting(true);
