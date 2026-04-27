@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Reusable confirmation dialog — modal w stylu reszty aplikacji.
@@ -40,24 +41,40 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
-  // Esc → cancel. Pomijamy gdy busy, żeby nie zostawić wiszącego requestu bez UI feedbacku.
+  // Esc → cancel, Enter → confirm. Pomijamy gdy busy — nie chcemy zostawić wiszącego
+  // requestu ani odpalić drugiego przez przypadkowy double-tap Entera.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onCancel();
+      if (busy) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        onConfirm();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, busy, onCancel]);
+  }, [open, busy, onCancel, onConfirm]);
 
   if (!open) return null;
 
-  return (
+  // Portal do <body>, żeby zdarzenia nie bublowały do żadnego rodzica (np. OrderDetail
+  // overlay z `onClick={onClose}`). Bez tego klik na overlay confirma zamykał także
+  // outer modal — confirm znikał razem ze swoim hostem i delete nigdy się nie kończył.
+  return createPortal(
     <div
       className="modal-overlay"
-      onClick={() => { if (!busy) onCancel(); }}
+      onClick={(e) => {
+        // Defensywnie: nawet w portalu zatrzymujemy propagację — gdyby ktoś w przyszłości
+        // umieścił globalny listener na document.
+        e.stopPropagation();
+        if (!busy) onCancel();
+      }}
       // z-index z .modal-overlay = 1000; ten dialog jest często otwierany NA innym modalu
-      // (np. OrderDetail). Lekki bump żeby nie kombinować z porting kolejności DOM.
+      // (np. OrderDetail). Lekki bump żeby leżeć ZAWSZE wyżej.
       style={{ zIndex: 1100 }}
     >
       <div
@@ -99,6 +116,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
