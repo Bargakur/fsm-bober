@@ -2,23 +2,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Order, Technician, TechnicianAvailability } from '../types';
 import { getOrders, getTechnicians, getBulkAvailability } from '../services/api';
+import { filterTechniciansForOrder } from '../utils/calendarFilter';
+import type { CalendarFilter } from '../utils/calendarFilter';
 
-export interface CalendarFilter {
-  treatmentId: number;
-  requiredSkill?: string;
-  lat: number;
-  lng: number;
-}
-
-/** Haversine — odległość w km między dwoma punktami GPS */
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+export type { CalendarFilter };
 
 const CITIES: [string, number, number][] = [
   ['Warszawa', 52.2297, 21.0122],
@@ -207,21 +194,12 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
 
   const isToday = date === todayStr();
 
-  // Filtruj techników wg prefiltra (specjalizacja + odległość 250km)
+  // Filtruj techników wg prefiltra (specjalizacja + min dystans z domu lub
+  // dowolnego dzisiejszego zlecenia technika; szczegóły w utils/calendarFilter.ts).
   const visibleTechnicians = useMemo(() => {
     if (!filter) return technicians;
-    return technicians.filter(t => {
-      // Sprawdź specjalizację (pomiń gdy zabieg nie wymaga żadnej)
-      if (filter.requiredSkill && filter.requiredSkill.trim().length > 0) {
-        const specs = t.specializations?.split(',').map(s => s.trim()).filter(Boolean) || [];
-        if (!specs.includes(filter.requiredSkill)) return false;
-      }
-      // Sprawdź odległość (z domu)
-      const dist = haversineKm(filter.lat, filter.lng, t.homeLat, t.homeLng);
-      if (dist > 250) return false;
-      return true;
-    });
-  }, [technicians, filter]);
+    return filterTechniciansForOrder(technicians, orders, filter);
+  }, [technicians, orders, filter]);
 
   // Grupuj zlecenia wg technika (+ nieprzypisane)
   const ordersByTech = useMemo(() => {

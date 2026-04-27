@@ -292,6 +292,37 @@ public class SuggestionServiceTests
     }
 
     [Fact]
+    public async Task GetSuggestions_SzczecinTechWithOrderInSuwalki_IsSuggestedForSuwalki()
+    {
+        // REGRESJA z bug reportu: technik mieszkający w Szczecinie ma już zlecenie
+        // koło Suwałk tego samego dnia. Handlowiec tworzy NOWE zlecenie również w Suwałkach.
+        // Ten technik MUSI być sugerowany — bo i tak będzie w okolicy.
+        // Wcześniej algorytm patrzył tylko na dom (~555 km od Suwałk po wielkim okręgu)
+        // i odrzucał kandydata, mimo że logistycznie był idealny.
+        await using var db = NewDb();
+        // Szczecin (centrum)
+        db.Technicians.Add(MakeTech(1, "Szczeciński technik", 53.4285, 14.5528));
+        SeedFixtures(db);
+
+        // Istniejące zlecenie ~5 km od centrum Suwałk
+        db.Orders.Add(MakeOrder(100, technicianId: 1, lat: 54.0995, lng: 22.9296,
+            start: new TimeOnly(8, 0), end: new TimeOnly(10, 0)));
+        await db.SaveChangesAsync();
+
+        var sut = new SuggestionService(db);
+        // Klient w Suwałkach (ten sam punkt co istniejące zlecenie)
+        var result = await sut.GetSuggestionsAsync(
+            54.0995, 22.9296, new DateOnly(2026, 5, 1),
+            new TimeOnly(12, 0), new TimeOnly(14, 0), null);
+
+        Assert.Single(result);
+        Assert.Equal(1, result[0].TechnicianId);
+        Assert.Equal("order", result[0].DistanceSource);
+        Assert.True(result[0].DistanceKm < 1,
+            $"Klient w punkcie istniejącego zlecenia → 0 km, dostałem {result[0].DistanceKm}");
+    }
+
+    [Fact]
     public async Task GetSuggestions_NoOrders_DistanceFromHome()
     {
         await using var db = NewDb();
