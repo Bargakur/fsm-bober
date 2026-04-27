@@ -1,11 +1,20 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Order, Technician, TechnicianAvailability } from '../types';
 import { getOrders, getTechnicians, getBulkAvailability } from '../services/api';
 import { filterTechniciansForOrder } from '../utils/calendarFilter';
 import type { CalendarFilter } from '../utils/calendarFilter';
+import { DayDataCache } from '../utils/dayDataCache';
 
 export type { CalendarFilter };
+
+/**
+ * Prefetch okna wokół aktualnej daty — żeby kliknięcia "prev/next" renderowały instant.
+ * Nie zerujemy: -1 do +3 to typowy zakres, w którym handlowiec porusza się dziennie.
+ * Większe okno = więcej zbędnych requestów na mount, mniejsze = za mało buforu.
+ */
+const PREFETCH_BEFORE = 1;
+const PREFETCH_AFTER = 3;
 
 const CITIES: [string, number, number][] = [
   ['Warszawa', 52.2297, 21.0122],
@@ -164,26 +173,64 @@ export default function ResourceCalendar({ onDateSelect, onOrderClick, refreshKe
     getTechnicians().then(setTechnicians).catch(() => {});
   }, []);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [ordersData, availData] = await Promise.all([
-        getOrders(date),
-        getBulkAvailability(date),
-      ]);
-      setOrders(ordersData);
-      setAvailability(availData);
-    } catch {
-      setOrders([]);
-      setAvailability([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [date]);
+  // Cache na cały lifecycle komponentu. Jeden Map'em okupowany do końca, niezależnie od zmian
+  // dat / refreshKey. Inwalidujemy zawartość przez `clear()`, nie tworząc nowego cache —
+  // dzięki temu in-flight requesty są poprawnie unieważnione (patrz `DayDataCache.generation`).
+  const cacheRef = useRef<DayDataCache | null>(null);
+  if (cacheRef.current === null) {
+    cacheRef.current = new DayDataCache({
+      getOrders,
+      getBulkAvailability,
+    });
+  }
 
+  // Bumping refreshKey = "ktoś zmienił dane na serwerze" → cały cache out.
+  // useEffect z osobnym deps zapewnia, że ten clear() zadziała PRZED load-effectem niżej.
   useEffect(() => {
-    loadData();
-  }, [loadData, refreshKey]);
+    cacheRef.current?.clear();
+  }, [refreshKey]);
+
+  // Załaduj dane dla aktualnego dnia + prefetch sąsiadów. Uwaga na cancellation:
+  // jeśli user szybko zmienia dni, starsze efekty nie powinny nadpisywać świeższych.
+  useEffect(() => {
+    const cache = cacheRef.current!;
+    let cancelled = false;
+
+    // Hit synchronously? Nie pokazuj "Loading", od razu narysuj z cache.
+    const cached = cache.get(date);
+    if (cached) {
+      setOrders(cached.orders);
+      setAvailability(cached.availability);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    // Niezależnie — odpal load (jeśli w cache, dostaniesz to samo).
+    cache.load(date)
+      .then((d) => {
+        if (cancelled) return;
+        setOrders(d.orders);
+        setAvailability(d.availability);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setOrders([]);
+        setAvailability([]);
+        setLoading(false);
+      });
+
+    // Prefetch okna ±N dni — best-effort, błędy ignorujemy (nie zaśmiecają cache, patrz testy).
+    for (let offset = -PREFETCH_BEFORE; offset <= PREFETCH_AFTER; offset++) {
+      if (offset === 0) continue;
+      cache.load(addDays(date, offset)).catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [date, refreshKey]);
 
   // Mapa dostępności per technik
   const availByTech = useMemo(() => {
