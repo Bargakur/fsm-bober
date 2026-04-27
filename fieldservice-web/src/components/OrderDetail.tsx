@@ -1,10 +1,15 @@
-import { X, MapPin, Clock, User, CreditCard, FileText, Phone, ClipboardList } from 'lucide-react';
+import { useState } from 'react';
+import { X, MapPin, Clock, User, CreditCard, FileText, Phone, ClipboardList, Trash2 } from 'lucide-react';
 import type { Order } from '../types';
+import { deleteOrder } from '../services/api';
+import ConfirmDialog from './ConfirmDialog';
 
 interface Props {
   order: Order;
   onClose: () => void;
   onAssign: (order: Order) => void;
+  /** Wywoływane po pomyślnym usunięciu — App.tsx zamyka modal i bumpuje refreshKey. */
+  onDeleted: () => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -15,7 +20,32 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Anulowane',
 };
 
-export default function OrderDetail({ order, onClose, onAssign }: Props) {
+export default function OrderDetail({ order, onClose, onAssign, onDeleted }: Props) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Backend blokuje completed (409). UI powinno też ukryć przycisk, żeby user nie próbował
+  // i nie widział czerwonego banera "Conflict". Anulowanie idzie osobnym flow (nie tutaj).
+  const canDelete = order.status !== 'completed';
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteOrder(order.id);
+      // Zamknięcie dialogu + parent decyduje co dalej (zamknij modal + odśwież kalendarz).
+      setConfirmOpen(false);
+      onDeleted();
+    } catch (err) {
+      // Backend zwraca 409 dla completed — gdyby ktoś obszedł canDelete, pokaż komunikat.
+      const msg = err instanceof Error ? err.message : 'Nieznany błąd';
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -124,6 +154,17 @@ export default function OrderDetail({ order, onClose, onAssign }: Props) {
         </div>
 
         <div className="modal-footer">
+          {canDelete && (
+            <button
+              className="btn btn-danger-outline"
+              onClick={() => setConfirmOpen(true)}
+              // Wyrównanie do lewej — separator wizualny od pozytywnych akcji po prawej.
+              style={{ marginRight: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <Trash2 size={16} />
+              Usuń
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={onClose}>Zamknij</button>
           {order.status === 'draft' && (
             <button className="btn btn-primary" onClick={() => onAssign(order)}>
@@ -132,6 +173,23 @@ export default function OrderDetail({ order, onClose, onAssign }: Props) {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Usunąć zlecenie?"
+        message={`Zlecenie #${order.id} (${order.customerName}) zostanie trwale usunięte wraz z protokołem i płatnością. Tej operacji nie można cofnąć.`}
+        confirmLabel="Usuń"
+        cancelLabel="Anuluj"
+        destructive
+        busy={deleting}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (deleting) return;
+          setConfirmOpen(false);
+          setDeleteError(null);
+        }}
+      />
     </div>
   );
 }
