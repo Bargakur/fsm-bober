@@ -208,6 +208,12 @@ export default function App() {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onAssign={handleAssignFromDetail}
+          onDeleted={() => {
+            // Zamknij modal i wymuś świeży fetch — DayDataCache.clear() w ResourceCalendar
+            // wykonuje się na zmianę refreshKey, więc usunięte zlecenie zniknie z widoku.
+            setSelectedOrder(null);
+            setRefreshKey(k => k + 1);
+          }}
         />
       )}
 

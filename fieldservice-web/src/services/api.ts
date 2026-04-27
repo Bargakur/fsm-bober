@@ -65,6 +65,16 @@ export async function assignTechnician(orderId: number, technicianId: number): P
   });
 }
 
+/**
+ * Kasowanie zlecenia. Backend blokuje `completed` (zwraca 409) — UI powinno mieć
+ * o tym świadomość i pokazać sensowny komunikat zamiast generycznego "API error".
+ * Pozostałe statusy (draft / assigned / in_progress / cancelled) idą do usunięcia
+ * razem z Protocol i Payment.
+ */
+export async function deleteOrder(orderId: number): Promise<void> {
+  return request(`/orders/${orderId}`, { method: 'DELETE' });
+}
+
 export async function getTreatments(): Promise<Treatment[]> {
   return request('/treatments');
 }

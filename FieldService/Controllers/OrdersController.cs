@@ -127,6 +127,43 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 
+    /// <summary>
+    /// DELETE /api/orders/5 — usuwa zlecenie wraz z powiązanymi rekordami (Protocol, Payment).
+    ///
+    /// Polityka:
+    /// - Zlecenia ze statusem `completed` NIE są kasowalne — mają ślad finansowy
+    ///   (Payment, ew. faktura). Refunda/anulowania robimy osobnym flow.
+    /// - Pozostałe statusy (draft / assigned / in_progress / cancelled) — można usuwać.
+    ///   Frontend pokazuje okienko potwierdzenia przed wywołaniem, więc brak tu
+    ///   dodatkowych kroków soft-delete.
+    /// - Brak skonfigurowanego cascade w EF — kasujemy Protocol/Payment ręcznie.
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteOrder(int id)
+    {
+        var order = await _db.Orders
+            .Include(o => o.Protocol)
+            .Include(o => o.Payment)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null) return NotFound();
+
+        if (order.Status == "completed")
+        {
+            return Conflict(new
+            {
+                message = "Nie można usunąć zakończonego zlecenia. Wymagana procedura anulowania."
+            });
+        }
+
+        if (order.Protocol != null) _db.Protocols.Remove(order.Protocol);
+        if (order.Payment != null) _db.Payments.Remove(order.Payment);
+        _db.Orders.Remove(order);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = $"Zlecenie #{id} usunięte" });
+    }
+
     /// <summary>GET /api/orders/technician/3?date=2026-04-15</summary>
     [HttpGet("technician/{technicianId}")]
     [Authorize(Roles = "technician,admin,superadmin")]
